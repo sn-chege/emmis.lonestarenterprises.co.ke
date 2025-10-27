@@ -66,10 +66,10 @@ jobs:
           server: ${{ secrets.CICD_SFTP_HOST }}
           username: ${{ secrets.CICD_SFTP_USER }}
           password: ${{ secrets.CICD_SFTP_PASSWORD }}
-          local-dir: dist/
+          local-dir: ./
 
           #OPTIONAL FLAGS
           dangerous-clean-slate: false
           # server-dir: server.server.com/
           # protocol: ftps
-          # dry-run: falses
+          # dry-run: falses   
