@@ -34,6 +34,4 @@ jobs:
             **/.git*
             **/.git*/**
             **/node_modules/**
-            **/.next/**
-            **/out/**
           dangerous-clean-slate: false
