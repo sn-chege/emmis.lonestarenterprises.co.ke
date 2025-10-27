@@ -29,9 +29,9 @@ jobs:
           username: ${{ secrets.CICD_SFTP_USER }}
           password: ${{ secrets.CICD_SFTP_PASSWORD }}
           local-dir: ./
-          s erver-dir: ./
+          server-dir: ./
           exclude: |
             **/.git*
             **/.git*/**
             **/node_modules/**
-          dangerous-clean-slate: false
+            dangerous-clean-slate: false
