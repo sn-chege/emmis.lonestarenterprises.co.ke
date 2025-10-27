@@ -15,6 +15,7 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx scripts/seed.ts",
     "db:seeders": "tsx scripts/seeders.ts",
+    "db:seeders:js": "node scripts/seeders.js",
     "db:backup": "tsx scripts/backup-db.ts"
   },
   "dependencies": {
