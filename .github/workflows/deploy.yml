@@ -22,17 +22,18 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Build Next.js app
-        run: npm run build
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
       - name: Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.CICD_SFTP_HOST }}
           username: ${{ secrets.CICD_SFTP_USER }}
           password: ${{ secrets.CICD_SFTP_PASSWORD }}
-          local-dir: ./.next/
+          local-dir: ./
           server-dir: ./
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/.next/**
+            **/out/**
           dangerous-clean-slate: false
