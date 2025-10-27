@@ -1,4 +1,41 @@
-name: Deploy Next.js App to cPanel FTP
+# name: Deploy Next.js App to cPanel FTP
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+# jobs:
+#   build-and-deploy:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+
+#       - name: Set up Node.js
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: "20"
+#           cache: 'npm'
+
+#       - name: Install dependencies
+#         run: npm install --legacy-peer-deps && npm run build
+
+#       - name: Deploy to FTP
+#         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+#         with:
+#           server: ${{ secrets.CICD_SFTP_HOST }}
+#           username: ${{ secrets.CICD_SFTP_USER }}
+#           password: ${{ secrets.CICD_SFTP_PASSWORD }}
+#           local-dir: ./
+#           server-dir: ./
+#           exclude: |
+#             **/.git*
+#             **/.git*/**
+#             **/node_modules/**
+#           dangerous-clean-slate: false
+name: Deploy React App to cPanel FTP
 
 on:
   push:
@@ -11,16 +48,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: "20"
-          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps && npm run build
+      - name: Install dependencies and build
+        run: |
+          yarn install
+          yarn build  # This assumes your build command is `yarn build`
 
       - name: Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -28,10 +66,10 @@ jobs:
           server: ${{ secrets.CICD_SFTP_HOST }}
           username: ${{ secrets.CICD_SFTP_USER }}
           password: ${{ secrets.CICD_SFTP_PASSWORD }}
-          local-dir: ./
-          server-dir: ./
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
+          local-dir: dist/
+
+          #OPTIONAL FLAGS
           dangerous-clean-slate: false
+          # server-dir: server.server.com/
+          # protocol: ftps
+          # dry-run: falses
