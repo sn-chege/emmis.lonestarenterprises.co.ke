@@ -1,0 +1,440 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @db.VarChar(50)
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  name         String    @db.VarChar(255)
+  role         UserRole  @default(technician)
+  avatar       String?   @db.VarChar(500)
+  phone        String?   @db.VarChar(50)
+  department   String?   @db.VarChar(100)
+  status       UserStatus @default(active)
+  lastLogin    DateTime? @map("last_login")
+  createdDate  DateTime  @default(now()) @map("created_date")
+  updatedDate  DateTime  @default(now()) @updatedAt @map("updated_date")
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+model Customer {
+  id               String          @id @db.VarChar(50)
+  companyName      String          @map("company_name") @db.VarChar(255)
+  industry         String?         @db.VarChar(100)
+  established      String?         @db.VarChar(50)
+  contactPerson    String          @map("contact_person") @db.VarChar(255)
+  title            String?         @db.VarChar(100)
+  email            String          @db.VarChar(255)
+  phone            String          @db.VarChar(50)
+  address          String          @db.Text
+  location         String?         @db.VarChar(255)
+  status           CustomerStatus  @default(Active)
+  contractStatus   ContractStatus  @map("contract_status") @default(Pending)
+  paymentStatus    PaymentStatus   @map("payment_status") @default(NA)
+  monthlyAmount    Decimal         @map("monthly_amount") @default(0.00) @db.Decimal(10, 2)
+  totalEquipment   Int             @map("total_equipment") @default(0)
+  contractExpiry   DateTime?       @map("contract_expiry") @db.Date
+  equipmentDetails String?         @map("equipment_details") @db.Text
+  technician       String?         @db.VarChar(255)
+  supervisor       String?         @db.VarChar(255)
+  createdDate      DateTime        @default(now()) @map("created_date")
+  updatedDate      DateTime        @default(now()) @updatedAt @map("updated_date")
+
+  assets Asset[]
+  leases Lease[]
+
+  @@index([companyName])
+  @@index([status])
+  @@index([contractStatus])
+  @@index([paymentStatus])
+  @@map("customers")
+}
+
+model Asset {
+  id                String            @id @db.VarChar(50)
+  make              String            @db.VarChar(255)
+  model             String            @db.VarChar(255)
+  serialNumber      String            @unique @map("serial_number") @db.VarChar(255)
+  category          String?           @db.VarChar(100)
+  description       String?           @db.Text
+  customerId        String            @map("customer_id") @db.VarChar(50)
+  customerName      String            @map("customer_name") @db.VarChar(255)
+  contactPerson     String?           @map("contact_person") @db.VarChar(255)
+  contactPhone      String?           @map("contact_phone") @db.VarChar(50)
+  location          String            @db.VarChar(255)
+  locationDetails   String?           @map("location_details") @db.Text
+  locationType      LocationType      @map("location_type") @default(fixed)
+  conditionStatus   AssetCondition    @map("condition_status") @default(good)
+  operationalStatus AssetStatus       @map("operational_status") @default(operational)
+  purchaseDate      DateTime?         @map("purchase_date") @db.Date
+  purchasePrice     Decimal           @map("purchase_price") @default(0.00) @db.Decimal(12, 2)
+  currentValue      Decimal           @map("current_value") @default(0.00) @db.Decimal(12, 2)
+  warrantyStart     DateTime?         @map("warranty_start") @db.Date
+  warrantyEnd       DateTime?         @map("warranty_end") @db.Date
+  warrantyProvider  String?           @map("warranty_provider") @db.VarChar(255)
+  lastServiceDate   DateTime?         @map("last_service_date") @db.Date
+  nextServiceDate   DateTime?         @map("next_service_date") @db.Date
+  photoUrl          String?           @map("photo_url") @db.VarChar(500)
+  notes             String?           @db.Text
+  createdDate       DateTime          @default(now()) @map("created_date")
+  updatedDate       DateTime          @default(now()) @updatedAt @map("updated_date")
+
+  customer           Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  repairHistory      RepairHistory[]
+  maintenanceSchedules MaintenanceSchedule[]
+
+  @@index([serialNumber])
+  @@index([customerId])
+  @@index([conditionStatus])
+  @@index([operationalStatus])
+  @@map("assets")
+}
+
+model RepairHistory {
+  id          Int      @id @default(autoincrement())
+  assetId     String   @map("asset_id") @db.VarChar(50)
+  repairDate  DateTime @map("repair_date") @db.Date
+  description String   @db.Text
+  cost        Decimal  @default(0.00) @db.Decimal(10, 2)
+  technician  String   @db.VarChar(255)
+  createdDate DateTime @default(now()) @map("created_date")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([repairDate])
+  @@map("repair_history")
+}
+
+model WorkOrder {
+  id               String            @id @db.VarChar(50)
+  customerName     String            @map("customer_name") @db.VarChar(255)
+  contactPerson    String            @map("contact_person") @db.VarChar(255)
+  contactPhone     String            @map("contact_phone") @db.VarChar(50)
+  equipmentName    String            @map("equipment_name") @db.VarChar(255)
+  equipmentMake    String            @map("equipment_make") @db.VarChar(255)
+  equipmentModel   String            @map("equipment_model") @db.VarChar(255)
+  serialNo         String            @map("serial_no") @db.VarChar(255)
+  location         String            @db.VarChar(255)
+  type             WorkOrderType
+  serviceType      ServiceType       @map("service_type")
+  priority         WorkOrderPriority @default(medium)
+  status           WorkOrderStatus   @default(open)
+  technicianName   String?           @map("technician_name") @db.VarChar(255)
+  supervisorName   String?           @map("supervisor_name") @db.VarChar(255)
+  dueDate          DateTime          @map("due_date") @db.Date
+  createdDate      DateTime          @default(now()) @map("created_date")
+  completedDate    DateTime?         @map("completed_date")
+  description      String            @db.Text
+  faultDescription String?           @map("fault_description") @db.Text
+  workCarriedOut   String?           @map("work_carried_out") @db.Text
+  pageCount        Int?              @map("page_count")
+  nextServiceDate  DateTime?         @map("next_service_date") @db.Date
+  estimatedCost    Decimal           @map("estimated_cost") @default(0.00) @db.Decimal(10, 2)
+  actualCost       Decimal?          @map("actual_cost") @db.Decimal(10, 2)
+  cancelReason     String?           @map("cancel_reason") @db.Text
+  updatedDate      DateTime          @default(now()) @updatedAt @map("updated_date")
+
+  consumableParts ConsumablePart[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([type])
+  @@index([dueDate])
+  @@map("work_orders")
+}
+
+model ConsumablePart {
+  id          Int      @id @default(autoincrement())
+  workOrderId String   @map("work_order_id") @db.VarChar(50)
+  partName    String   @map("part_name") @db.VarChar(255)
+  quantity    Int      @default(1)
+  cost        Decimal  @default(0.00) @db.Decimal(10, 2)
+  createdDate DateTime @default(now()) @map("created_date")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@map("consumable_parts")
+}
+
+model MaintenanceSchedule {
+  id                String              @id @db.VarChar(50)
+  equipmentId       String              @map("equipment_id") @db.VarChar(50)
+  equipmentName     String              @map("equipment_name") @db.VarChar(255)
+  serialNo          String              @map("serial_no") @db.VarChar(255)
+  customerId        String?             @map("customer_id") @db.VarChar(50)
+  customerName      String?             @map("customer_name") @db.VarChar(255)
+  type              MaintenanceType
+  serviceType       ServiceType         @map("service_type")
+  description       String              @db.Text
+  faultDescription  String?             @map("fault_description") @db.Text
+  scheduledDate     DateTime            @map("scheduled_date") @db.Date
+  status            MaintenanceStatus   @default(scheduled)
+  priority          MaintenancePriority @default(medium)
+  technicianId      String?             @map("technician_id") @db.VarChar(50)
+  technicianName    String?             @map("technician_name") @db.VarChar(255)
+  pageCount         Int?                @map("page_count")
+  estimatedDuration Int?                @map("estimated_duration")
+  actualDuration    Int?                @map("actual_duration")
+  createdDate       DateTime            @default(now()) @map("created_date")
+  completedDate     DateTime?           @map("completed_date")
+  workCarriedOut    String?             @map("work_carried_out") @db.Text
+  notes             String?             @db.Text
+  updatedDate       DateTime            @default(now()) @updatedAt @map("updated_date")
+
+  equipment        Asset             @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  maintenanceParts MaintenancePart[]
+
+  @@index([equipmentId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@index([priority])
+  @@map("maintenance_schedules")
+}
+
+model MaintenancePart {
+  id            Int      @id @default(autoincrement())
+  maintenanceId String   @map("maintenance_id") @db.VarChar(50)
+  partName      String   @map("part_name") @db.VarChar(255)
+  quantity      Int      @default(1)
+  cost          Decimal  @default(0.00) @db.Decimal(10, 2)
+  createdDate   DateTime @default(now()) @map("created_date")
+
+  maintenance MaintenanceSchedule @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+
+  @@index([maintenanceId])
+  @@map("maintenance_parts")
+}
+
+model MaintenanceTemplate {
+  id                String          @id @db.VarChar(50)
+  name              String          @db.VarChar(255)
+  description       String          @db.Text
+  type              MaintenanceType
+  estimatedDuration Int             @map("estimated_duration")
+  checklist         String          @db.Text
+  notes             String?         @db.Text
+  createdDate       DateTime        @default(now()) @map("created_date")
+  updatedDate       DateTime        @default(now()) @updatedAt @map("updated_date")
+
+  @@index([type])
+  @@map("maintenance_templates")
+}
+
+model Lease {
+  id                String            @id @db.VarChar(50)
+  equipmentName     String            @map("equipment_name") @db.VarChar(255)
+  serialNo          String            @map("serial_no") @db.VarChar(255)
+  customerId        String            @map("customer_id") @db.VarChar(50)
+  customerName      String            @map("customer_name") @db.VarChar(255)
+  startDate         DateTime          @map("start_date") @db.Date
+  endDate           DateTime          @map("end_date") @db.Date
+  paymentAmount     Decimal           @map("payment_amount") @db.Decimal(10, 2)
+  paymentFrequency  PaymentFrequency  @map("payment_frequency") @default(monthly)
+  status            LeaseStatus       @default(pending)
+  paymentStatus     LeasePaymentStatus @map("payment_status") @default(pending)
+  nextPaymentDate   DateTime          @map("next_payment_date") @db.Date
+  totalPaid         Decimal           @map("total_paid") @default(0.00) @db.Decimal(12, 2)
+  remainingPayments Int               @map("remaining_payments") @default(0)
+  contractTerms     String?           @map("contract_terms") @db.Text
+  notes             String?           @db.Text
+  createdDate       DateTime          @default(now()) @map("created_date")
+  updatedDate       DateTime          @default(now()) @updatedAt @map("updated_date")
+
+  customer      Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  leasePayments LeasePayment[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([nextPaymentDate])
+  @@map("leases")
+}
+
+model LeasePayment {
+  id              Int      @id @default(autoincrement())
+  leaseId         String   @map("lease_id") @db.VarChar(50)
+  paymentDate     DateTime @map("payment_date") @db.Date
+  amount          Decimal  @db.Decimal(10, 2)
+  paymentMethod   String?  @map("payment_method") @db.VarChar(100)
+  referenceNumber String?  @map("reference_number") @db.VarChar(100)
+  notes           String?  @db.Text
+  createdDate     DateTime @default(now()) @map("created_date")
+
+  lease Lease @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+
+  @@index([leaseId])
+  @@index([paymentDate])
+  @@map("lease_payments")
+}
+
+model Report {
+  id            String       @id @db.VarChar(50)
+  name          String       @db.VarChar(255)
+  type          String       @db.VarChar(100)
+  generatedDate DateTime     @default(now()) @map("generated_date")
+  format        ReportFormat
+  fileSize      String?      @map("file_size") @db.VarChar(50)
+  filePath      String?      @map("file_path") @db.VarChar(500)
+  status        ReportStatus @default(processing)
+  generatedBy   String?      @map("generated_by") @db.VarChar(50)
+  parameters    String?      @db.Text
+  createdDate   DateTime     @default(now()) @map("created_date")
+
+  @@index([type])
+  @@index([status])
+  @@index([generatedDate])
+  @@map("reports")
+}
+
+model SystemSetting {
+  id           Int      @id @default(autoincrement())
+  settingKey   String   @unique @map("setting_key") @db.VarChar(100)
+  settingValue String?  @map("setting_value") @db.Text
+  description  String?  @db.Text
+  updatedDate  DateTime @default(now()) @updatedAt @map("updated_date")
+
+  @@index([settingKey])
+  @@map("system_settings")
+}
+
+enum UserRole {
+  admin
+  supervisor
+  technician
+}
+
+enum UserStatus {
+  active
+  inactive
+  suspended
+}
+
+enum CustomerStatus {
+  Active
+  Inactive
+  Pending
+  Suspended
+}
+
+enum ContractStatus {
+  Active
+  Expired
+  RenewalDue @map("Renewal Due")
+  Pending
+}
+
+enum PaymentStatus {
+  Current
+  Overdue
+  Pending
+  NA @map("N/A")
+}
+
+enum LocationType {
+  fixed
+  mobile
+}
+
+enum AssetCondition {
+  new
+  good
+  damaged
+  poor
+}
+
+enum AssetStatus {
+  operational
+  maintenance
+  repair
+  retired
+}
+
+enum WorkOrderType {
+  service
+  repair
+}
+
+enum WorkOrderStatus {
+  open
+  assigned
+  inProgress @map("in-progress")
+  completed
+  cancelled
+}
+
+enum WorkOrderPriority {
+  low
+  medium
+  high
+  critical
+}
+
+enum ServiceType {
+  scheduled
+  unscheduled
+}
+
+enum MaintenanceType {
+  service
+  repair
+  preventive
+  emergency
+}
+
+enum MaintenanceStatus {
+  scheduled
+  inProgress @map("in-progress")
+  completed
+  overdue
+  cancelled
+}
+
+enum MaintenancePriority {
+  low
+  medium
+  high
+  critical
+}
+
+enum PaymentFrequency {
+  monthly
+  quarterly
+  annually
+}
+
+enum LeaseStatus {
+  active
+  pending
+  expired
+  terminated
+}
+
+enum LeasePaymentStatus {
+  current
+  overdue
+  pending
+}
+
+enum ReportFormat {
+  PDF
+  Excel
+  CSV
+}
+
+enum ReportStatus {
+  completed
+  processing
+  failed
+}

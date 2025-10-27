@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ProtectedLayout } from "@/components/protected-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,12 +11,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { UserPlus, Search, MoreVertical, Eye, Edit, Trash2, Users, UserCheck, UserX } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { UserModal } from "@/components/users/user-modal"
-import { MOCK_USERS } from "@/lib/mock-data"
+import { api } from "@/lib/api"
 import type { User, UserRole, UserStatus } from "@/lib/types"
 import { formatDate } from "@/lib/utils/format"
+import { useNotifications } from "@/components/notification-provider"
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>(MOCK_USERS)
+  const { notifySuccess, notifyError, notifyDelete } = useNotifications()
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -54,29 +57,39 @@ export default function UsersPage() {
     setModalOpen(true)
   }
 
-  const handleDeleteUser = (userId: string) => {
+  const handleDeleteUser = async (userId: string) => {
     if (confirm("Are you sure you want to delete this user?")) {
-      setUsers(users.filter((u) => u.id !== userId))
+      try {
+        await api.deleteUser(userId)
+        setUsers(users.filter((u) => u.id !== userId))
+        notifyDelete("User Deleted", "User has been deleted successfully.")
+      } catch (error) {
+        notifyError("Error", "Failed to delete user")
+      }
     }
   }
 
-  const handleSaveUser = (userData: Partial<User>) => {
-    if (modalMode === "add") {
-      const newUser: User = {
-        id: `USR${String(users.length + 1).padStart(3, "0")}`,
-        email: userData.email!,
-        name: userData.name!,
-        role: userData.role!,
-        phone: userData.phone,
-        department: userData.department,
-        status: userData.status || "active",
-        createdDate: new Date().toISOString().split("T")[0],
+  const handleSaveUser = async (userData: Partial<User>) => {
+    try {
+      if (modalMode === "add") {
+        const newUser = await api.createUser({
+          id: `USR${String(users.length + 1).padStart(3, "0")}`,
+          ...userData,
+          status: userData.status || "active",
+        })
+        setUsers([...users, newUser])
+        notifySuccess("User Added", "User has been added successfully.")
+        setModalOpen(false)
+      } else if (modalMode === "edit" && selectedUser) {
+        const updatedUser = await api.updateUser(selectedUser.id, userData)
+        setUsers(users.map((u) => (u.id === selectedUser.id ? updatedUser : u)))
+        notifySuccess("User Updated", "User has been updated successfully.")
+        setModalOpen(false)
       }
-      setUsers([...users, newUser])
-    } else if (modalMode === "edit" && selectedUser) {
-      setUsers(users.map((u) => (u.id === selectedUser.id ? { ...u, ...userData } : u)))
+    } catch (error) {
+      // Error will be handled by the modal's notification system
+      throw error
     }
-    setModalOpen(false)
   }
 
   const getStatusBadge = (status: UserStatus) => {
@@ -100,6 +113,30 @@ export default function UsersPage() {
   const activeUsers = users.filter((u) => u.status === "active").length
   const inactiveUsers = users.filter((u) => u.status === "inactive").length
   const suspendedUsers = users.filter((u) => u.status === "suspended").length
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const data = await api.getUsers()
+        setUsers(data)
+      } catch (error) {
+        notifyError("Error", "Failed to load users")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchUsers()
+  }, [])
+
+  if (loading) {
+    return (
+      <ProtectedLayout>
+        <div className="p-6">
+          <div className="text-center">Loading users...</div>
+        </div>
+      </ProtectedLayout>
+    )
+  }
 
   return (
     <ProtectedLayout>

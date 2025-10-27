@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MaintenanceModal } from "@/components/maintenance/maintenance-modal"
 import { TemplatesModal } from "@/components/maintenance/templates-modal"
-import { MOCK_MAINTENANCE, MOCK_MAINTENANCE_TEMPLATES } from "@/lib/mock-data"
+import { api } from "@/lib/api"
 import type { MaintenanceRecord, MaintenanceTemplate } from "@/lib/types"
 import { formatDate } from "@/lib/utils/format"
 import { Wrench, FileText, Search, Eye, Edit, Trash2, Play, CheckCircle, Calendar, FileBarChart } from "lucide-react"
@@ -18,8 +18,9 @@ import { ProtectedLayout } from "@/components/protected-layout"
 
 export default function MaintenancePage() {
   const { toast } = useToast()
-  const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>(MOCK_MAINTENANCE)
-  const [templates, setTemplates] = useState<MaintenanceTemplate[]>(MOCK_MAINTENANCE_TEMPLATES)
+  const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([])
+  const [templates, setTemplates] = useState<MaintenanceTemplate[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -72,17 +73,26 @@ export default function MaintenancePage() {
     setModalOpen(true)
   }
 
-  const handleStart = (id: string) => {
-    setMaintenance((prev) => prev.map((m) => (m.id === id ? { ...m, status: "in-progress" as const } : m)))
-    toast({
-      title: "Maintenance Started",
-      description: "Maintenance task has been started successfully.",
-    })
+  const handleStart = async (id: string) => {
+    try {
+      const updatedMaintenance = await api.updateMaintenanceSchedule(id, { status: "inProgress" })
+      setMaintenance((prev) => prev.map((m) => (m.id === id ? updatedMaintenance : m)))
+      toast({
+        title: "Maintenance Started",
+        description: "Maintenance task has been started successfully.",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start maintenance",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const m = maintenance.find((item) => item.id === id)
-    if (m?.status === "in-progress") {
+    if (m?.status === "inProgress") {
       toast({
         title: "Cannot Delete",
         description: "Cannot delete maintenance that is in progress.",
@@ -91,35 +101,57 @@ export default function MaintenancePage() {
       return
     }
     if (confirm("Are you sure you want to delete this maintenance record?")) {
-      setMaintenance((prev) => prev.filter((m) => m.id !== id))
-      toast({
-        title: "Maintenance Deleted",
-        description: "Maintenance record has been deleted successfully.",
-      })
+      try {
+        await api.deleteMaintenanceSchedule(id)
+        setMaintenance((prev) => prev.filter((m) => m.id !== id))
+        toast({
+          title: "Maintenance Deleted",
+          description: "Maintenance record has been deleted successfully.",
+        })
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete maintenance record",
+          variant: "destructive",
+        })
+      }
     }
   }
 
-  const handleSave = (data: MaintenanceRecord) => {
-    if (modalMode === "add") {
-      setMaintenance((prev) => [...prev, data])
+  const handleSave = async (data: MaintenanceRecord) => {
+    try {
+      if (modalMode === "add") {
+        const newMaintenance = await api.createMaintenanceSchedule({
+          id: `MNT${String(maintenance.length + 1).padStart(3, "0")}`,
+          ...data,
+        })
+        setMaintenance((prev) => [...prev, newMaintenance])
+        toast({
+          title: "Maintenance Scheduled",
+          description: "Maintenance has been scheduled successfully.",
+        })
+      } else if (modalMode === "edit" || modalMode === "complete" || modalMode === "reschedule") {
+        const updatedMaintenance = await api.updateMaintenanceSchedule(data.id, data)
+        setMaintenance((prev) => prev.map((m) => (m.id === data.id ? updatedMaintenance : m)))
+        toast({
+          title: "Maintenance Updated",
+          description: "Maintenance has been updated successfully.",
+        })
+      }
+      setModalOpen(false)
+    } catch (error) {
       toast({
-        title: "Maintenance Scheduled",
-        description: "Maintenance has been scheduled successfully.",
-      })
-    } else if (modalMode === "edit" || modalMode === "complete" || modalMode === "reschedule") {
-      setMaintenance((prev) => prev.map((m) => (m.id === data.id ? data : m)))
-      toast({
-        title: "Maintenance Updated",
-        description: "Maintenance has been updated successfully.",
+        title: "Error",
+        description: "Failed to save maintenance",
+        variant: "destructive",
       })
     }
-    setModalOpen(false)
   }
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       scheduled: "outline",
-      "in-progress": "default",
+      "inProgress": "default",
       completed: "secondary",
       overdue: "destructive",
       cancelled: "secondary",
@@ -145,6 +177,34 @@ export default function MaintenancePage() {
       emergency: "destructive",
     }
     return variants[type] || "default"
+  }
+
+  useEffect(() => {
+    const fetchMaintenance = async () => {
+      try {
+        const data = await api.getMaintenanceSchedules()
+        setMaintenance(data)
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load maintenance schedules",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchMaintenance()
+  }, [])
+
+  if (loading) {
+    return (
+      <ProtectedLayout>
+        <div className="p-6">
+          <div className="text-center">Loading maintenance schedules...</div>
+        </div>
+      </ProtectedLayout>
+    )
   }
 
   return (
@@ -291,7 +351,7 @@ export default function MaintenancePage() {
                                 </Button>
                               </>
                             )}
-                            {m.status === "in-progress" && (
+                            {m.status === "inProgress" && (
                               <Button variant="ghost" size="icon" onClick={() => handleComplete(m)}>
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
@@ -301,7 +361,7 @@ export default function MaintenancePage() {
                                 <FileBarChart className="h-4 w-4" />
                               </Button>
                             )}
-                            {m.status !== "in-progress" && (
+                            {m.status !== "inProgress" && (
                               <Button variant="ghost" size="icon" onClick={() => handleDelete(m.id)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>

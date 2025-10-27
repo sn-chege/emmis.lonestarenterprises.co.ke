@@ -30,20 +30,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { MOCK_CUSTOMERS, MOCK_ASSETS } from "@/lib/mock-data"
+import { api } from "@/lib/api"
+import { useNotifications } from "@/components/notification-provider"
 
 interface WorkOrderModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   mode: "add" | "edit" | "view"
   workOrder: WorkOrder | null
-  onSave: (workOrder: Partial<WorkOrder>) => void
+  onSave: (workOrder: Partial<WorkOrder>) => Promise<void>
   onDelete: (workOrderId: string) => void
 }
 
 export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, onDelete }: WorkOrderModalProps) {
+  const { notifyError } = useNotifications()
   const [formData, setFormData] = useState<Partial<WorkOrder>>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [customers, setCustomers] = useState<any[]>([])
+  const [assets, setAssets] = useState<any[]>([])
 
   useEffect(() => {
     if (workOrder && (mode === "edit" || mode === "view")) {
@@ -53,9 +58,35 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
     }
   }, [workOrder, mode])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [customersData, assetsData] = await Promise.all([
+          api.getCustomers(),
+          api.getAssets()
+        ])
+        setCustomers(customersData)
+        setAssets(assetsData)
+      } catch (error) {
+        console.error('Failed to fetch data:', error)
+      }
+    }
+    if (open) {
+      fetchData()
+    }
+  }, [open])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(formData)
+    setIsSubmitting(true)
+    
+    try {
+      await onSave(formData)
+    } catch (err) {
+      notifyError("Error", err instanceof Error ? err.message : 'An error occurred while saving')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleDelete = () => {
@@ -66,7 +97,7 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
   }
 
   const handleCustomerChange = (customerId: string) => {
-    const customer = MOCK_CUSTOMERS.find((c) => c.id === customerId)
+    const customer = customers.find((c) => c.id === customerId)
     if (customer) {
       setFormData({
         ...formData,
@@ -78,7 +109,7 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
   }
 
   const handleEquipmentChange = (assetId: string) => {
-    const asset = MOCK_ASSETS.find((a) => a.id === assetId)
+    const asset = assets.find((a) => a.id === assetId)
     if (asset) {
       setFormData({
         ...formData,
@@ -250,7 +281,7 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
                       <SelectValue placeholder="Select customer" />
                     </SelectTrigger>
                     <SelectContent>
-                      {MOCK_CUSTOMERS.map((customer) => (
+                      {customers.map((customer) => (
                         <SelectItem key={customer.id} value={customer.id}>
                           {customer.companyName}
                         </SelectItem>
@@ -274,7 +305,7 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
                       <SelectValue placeholder="Select equipment" />
                     </SelectTrigger>
                     <SelectContent>
-                      {MOCK_ASSETS.map((asset) => (
+                      {assets.map((asset) => (
                         <SelectItem key={asset.id} value={asset.id}>
                           {asset.make} {asset.model} - {asset.serialNumber}
                         </SelectItem>
@@ -449,8 +480,10 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
                     Delete
                   </Button>
                 )}
-                <Button type="submit" onClick={handleSubmit}>
-                  {mode === "add" ? (
+                <Button type="submit" onClick={handleSubmit} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    "Saving..."
+                  ) : mode === "add" ? (
                     <>
                       <Plus className="w-4 h-4 mr-2" />
                       Create Work Order

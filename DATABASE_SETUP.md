@@ -14,18 +14,6 @@ Run the SQL scripts in the `scripts/` folder in numerical order:
 
 \`\`\`bash
 mysql -u root -p < scripts/01-create-database.sql
-mysql -u root -p < scripts/02-create-users-table.sql
-mysql -u root -p < scripts/03-create-customers-table.sql
-mysql -u root -p < scripts/04-create-assets-table.sql
-mysql -u root -p < scripts/05-create-repair-history-table.sql
-mysql -u root -p < scripts/06-create-work-orders-table.sql
-mysql -u root -p < scripts/07-create-consumable-parts-table.sql
-mysql -u root -p < scripts/08-create-maintenance-table.sql
-mysql -u root -p < scripts/09-create-maintenance-parts-table.sql
-mysql -u root -p < scripts/10-create-maintenance-templates-table.sql
-mysql -u root -p < scripts/11-create-template-checklist-table.sql
-mysql -u root-p < scripts/12-create-leases-table.sql
-mysql -u root -p < scripts/13-create-reports-table.sql
 \`\`\`
 
 Or run all at once:

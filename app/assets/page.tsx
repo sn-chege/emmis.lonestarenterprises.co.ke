@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { ProtectedLayout } from "@/components/protected-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,15 +9,17 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Search, FilterX, Download, Eye, Edit, Wrench, History } from "lucide-react"
-import { MOCK_ASSETS, MOCK_CUSTOMERS } from "@/lib/mock-data"
+import { api } from "@/lib/api"
 import type { Asset } from "@/lib/types"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { AssetModal } from "@/components/assets/asset-modal"
-import { useToast } from "@/hooks/use-toast"
+import { useNotifications } from "@/components/notification-provider"
 
 export default function AssetsPage() {
-  const { toast } = useToast()
-  const [assets, setAssets] = useState<Asset[]>(MOCK_ASSETS)
+  const { notifySuccess, notifyError, notifyDelete } = useNotifications()
+  const [assets, setAssets] = useState<Asset[]>([])
+  const [customers, setCustomers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [customerFilter, setCustomerFilter] = useState<string>("all")
   const [conditionFilter, setConditionFilter] = useState<string>("all")
@@ -37,8 +39,8 @@ export default function AssetsPage() {
         asset.customerName.toLowerCase().includes(searchTerm.toLowerCase())
 
       const matchesCustomer = customerFilter === "all" || asset.customerId === customerFilter
-      const matchesCondition = conditionFilter === "all" || asset.condition === conditionFilter
-      const matchesStatus = statusFilter === "all" || asset.status === statusFilter
+      const matchesCondition = conditionFilter === "all" || asset.conditionStatus === conditionFilter
+      const matchesStatus = statusFilter === "all" || asset.operationalStatus === statusFilter
 
       return matchesSearch && matchesCustomer && matchesCondition && matchesStatus
     })
@@ -69,50 +71,47 @@ export default function AssetsPage() {
     setModalOpen(true)
   }
 
-  const handleSaveAsset = (assetData: Partial<Asset>) => {
-    if (modalMode === "add") {
-      const newAsset: Asset = {
-        id: `AST${String(assets.length + 1).padStart(3, "0")}`,
-        condition: "good",
-        status: "operational",
-        locationType: "fixed",
-        purchasePrice: 0,
-        currentValue: 0,
-        repairHistory: [],
-        ...assetData,
-      } as Asset
-
-      setAssets([...assets, newAsset])
-      toast({
-        title: "Asset Added",
-        description: `${newAsset.make} ${newAsset.model} has been added successfully.`,
-      })
-    } else if (modalMode === "edit" && selectedAsset) {
-      setAssets(assets.map((a) => (a.id === selectedAsset.id ? { ...a, ...assetData } : a)))
-      toast({
-        title: "Asset Updated",
-        description: `${selectedAsset.make} ${selectedAsset.model} has been updated successfully.`,
-      })
+  const handleSaveAsset = async (assetData: Partial<Asset>) => {
+    try {
+      if (modalMode === "add") {
+        const newAsset = await api.createAsset({
+          id: `AST${String(assets.length + 1).padStart(3, "0")}`,
+          conditionStatus: "good",
+          operationalStatus: "operational",
+          locationType: "fixed",
+          purchasePrice: 0,
+          currentValue: 0,
+          ...assetData,
+        })
+        setAssets([...assets, newAsset])
+        notifySuccess("Asset Added", `${newAsset.make} ${newAsset.model} has been added successfully.`)
+        setModalOpen(false)
+      } else if (modalMode === "edit" && selectedAsset) {
+        const updatedAsset = await api.updateAsset(selectedAsset.id, assetData)
+        setAssets(assets.map((a) => (a.id === selectedAsset.id ? updatedAsset : a)))
+        notifySuccess("Asset Updated", `${updatedAsset.make} ${updatedAsset.model} has been updated successfully.`)
+        setModalOpen(false)
+      }
+    } catch (error) {
+      // Error will be handled by the modal's notification system
+      throw error
     }
-    setModalOpen(false)
   }
 
-  const handleDeleteAsset = (assetId: string) => {
-    const asset = assets.find((a) => a.id === assetId)
-    setAssets(assets.filter((a) => a.id !== assetId))
-    toast({
-      title: "Asset Deleted",
-      description: `${asset?.make} ${asset?.model} has been deleted successfully.`,
-      variant: "destructive",
-    })
-    setModalOpen(false)
+  const handleDeleteAsset = async (assetId: string) => {
+    try {
+      const asset = assets.find((a) => a.id === assetId)
+      await api.deleteAsset(assetId)
+      setAssets(assets.filter((a) => a.id !== assetId))
+      notifyDelete("Asset Deleted", `${asset?.make} ${asset?.model} has been deleted successfully.`)
+      setModalOpen(false)
+    } catch (error) {
+      notifyError("Error", "Failed to delete asset")
+    }
   }
 
   const exportToExcel = () => {
-    toast({
-      title: "Export Started",
-      description: "Exporting asset data to Excel...",
-    })
+    notifySuccess("Export Started", "Exporting asset data to Excel...")
   }
 
   const getConditionBadgeVariant = (condition: string) => {
@@ -143,6 +142,34 @@ export default function AssetsPage() {
       default:
         return "outline"
     }
+  }
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [assetsData, customersData] = await Promise.all([
+          api.getAssets(),
+          api.getCustomers()
+        ])
+        setAssets(assetsData)
+        setCustomers(customersData)
+      } catch (error) {
+        notifyError("Error", "Failed to load data")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  if (loading) {
+    return (
+      <ProtectedLayout>
+        <div className="p-6">
+          <div className="text-center">Loading assets...</div>
+        </div>
+      </ProtectedLayout>
+    )
   }
 
   return (
@@ -188,7 +215,7 @@ export default function AssetsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Customers</SelectItem>
-                    {MOCK_CUSTOMERS.map((customer) => (
+                    {customers.map((customer) => (
                       <SelectItem key={customer.id} value={customer.id}>
                         {customer.companyName}
                       </SelectItem>
@@ -272,13 +299,13 @@ export default function AssetsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getConditionBadgeVariant(asset.condition)} className="capitalize">
-                            {asset.condition}
+                          <Badge variant={getConditionBadgeVariant(asset.conditionStatus)} className="capitalize">
+                            {asset.conditionStatus}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getStatusBadgeVariant(asset.status)} className="capitalize">
-                            {asset.status}
+                          <Badge variant={getStatusBadgeVariant(asset.operationalStatus)} className="capitalize">
+                            {asset.operationalStatus}
                           </Badge>
                         </TableCell>
                         <TableCell>

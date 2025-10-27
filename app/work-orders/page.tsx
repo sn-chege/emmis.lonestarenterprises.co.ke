@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { ProtectedLayout } from "@/components/protected-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,15 +9,16 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Search, FilterX, Download, Eye, Edit, UserPlus, CheckCircle } from "lucide-react"
-import { MOCK_WORK_ORDERS } from "@/lib/mock-data"
+import { api } from "@/lib/api"
 import type { WorkOrder } from "@/lib/types"
 import { formatDate } from "@/lib/utils/format"
 import { WorkOrderModal } from "@/components/work-orders/work-order-modal"
-import { useToast } from "@/hooks/use-toast"
+import { useNotifications } from "@/components/notification-provider"
 
 export default function WorkOrdersPage() {
-  const { toast } = useToast()
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(MOCK_WORK_ORDERS)
+  const { notifySuccess, notifyError, notifyDelete } = useNotifications()
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -68,48 +69,45 @@ export default function WorkOrdersPage() {
     setModalOpen(true)
   }
 
-  const handleSaveWorkOrder = (workOrderData: Partial<WorkOrder>) => {
-    if (modalMode === "add") {
-      const newWorkOrder: WorkOrder = {
-        id: `WO${String(workOrders.length + 1).padStart(3, "0")}`,
-        status: "open",
-        priority: "medium",
-        serviceType: "scheduled",
-        createdDate: new Date().toISOString().split("T")[0],
-        estimatedCost: 0,
-        ...workOrderData,
-      } as WorkOrder
-
-      setWorkOrders([...workOrders, newWorkOrder])
-      toast({
-        title: "Work Order Created",
-        description: `Work order ${newWorkOrder.id} has been created successfully.`,
-      })
-    } else if (modalMode === "edit" && selectedWorkOrder) {
-      setWorkOrders(workOrders.map((wo) => (wo.id === selectedWorkOrder.id ? { ...wo, ...workOrderData } : wo)))
-      toast({
-        title: "Work Order Updated",
-        description: `Work order ${selectedWorkOrder.id} has been updated successfully.`,
-      })
+  const handleSaveWorkOrder = async (workOrderData: Partial<WorkOrder>) => {
+    try {
+      if (modalMode === "add") {
+        const newWorkOrder = await api.createWorkOrder({
+          id: `WO${String(workOrders.length + 1).padStart(3, "0")}`,
+          status: "open",
+          priority: "medium",
+          serviceType: "scheduled",
+          estimatedCost: 0,
+          ...workOrderData,
+        })
+        setWorkOrders([...workOrders, newWorkOrder])
+        notifySuccess("Work Order Created", `Work order ${newWorkOrder.id} has been created successfully.`)
+        setModalOpen(false)
+      } else if (modalMode === "edit" && selectedWorkOrder) {
+        const updatedWorkOrder = await api.updateWorkOrder(selectedWorkOrder.id, workOrderData)
+        setWorkOrders(workOrders.map((wo) => (wo.id === selectedWorkOrder.id ? updatedWorkOrder : wo)))
+        notifySuccess("Work Order Updated", `Work order ${updatedWorkOrder.id} has been updated successfully.`)
+        setModalOpen(false)
+      }
+    } catch (error) {
+      // Error will be handled by the modal's notification system
+      throw error
     }
-    setModalOpen(false)
   }
 
-  const handleDeleteWorkOrder = (workOrderId: string) => {
-    setWorkOrders(workOrders.filter((wo) => wo.id !== workOrderId))
-    toast({
-      title: "Work Order Deleted",
-      description: `Work order ${workOrderId} has been deleted successfully.`,
-      variant: "destructive",
-    })
-    setModalOpen(false)
+  const handleDeleteWorkOrder = async (workOrderId: string) => {
+    try {
+      await api.deleteWorkOrder(workOrderId)
+      setWorkOrders(workOrders.filter((wo) => wo.id !== workOrderId))
+      notifyDelete("Work Order Deleted", `Work order ${workOrderId} has been deleted successfully.`)
+      setModalOpen(false)
+    } catch (error) {
+      notifyError("Error", "Failed to delete work order")
+    }
   }
 
   const exportToExcel = () => {
-    toast({
-      title: "Export Started",
-      description: "Exporting work order data to Excel...",
-    })
+    notifySuccess("Export Started", "Exporting work order data to Excel...")
   }
 
   const getPriorityBadgeVariant = (priority: string) => {
@@ -142,6 +140,30 @@ export default function WorkOrdersPage() {
       default:
         return "outline"
     }
+  }
+
+  useEffect(() => {
+    const fetchWorkOrders = async () => {
+      try {
+        const data = await api.getWorkOrders()
+        setWorkOrders(data)
+      } catch (error) {
+        notifyError("Error", "Failed to load work orders")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchWorkOrders()
+  }, [])
+
+  if (loading) {
+    return (
+      <ProtectedLayout>
+        <div className="p-6">
+          <div className="text-center">Loading work orders...</div>
+        </div>
+      </ProtectedLayout>
+    )
   }
 
   return (

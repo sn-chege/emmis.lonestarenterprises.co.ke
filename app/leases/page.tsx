@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ProtectedLayout } from "@/components/protected-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,6 +24,8 @@ import {
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
+import { api } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 type LeaseStatus = "active" | "pending" | "expired" | "terminated"
 type PaymentStatus = "current" | "overdue" | "pending"
@@ -44,56 +46,10 @@ interface Lease {
   remainingPayments: number
 }
 
-const MOCK_LEASES: Lease[] = [
-  {
-    id: "LS001",
-    equipmentName: "Canon iR-ADV C3530i",
-    serialNo: "CN12345ABC",
-    customerName: "Acme Manufacturing Ltd",
-    startDate: "2023-01-15",
-    endDate: "2026-01-15",
-    paymentAmount: 12500,
-    paymentFrequency: "monthly",
-    status: "active",
-    paymentStatus: "current",
-    nextPaymentDate: "2024-03-15",
-    totalPaid: 300000,
-    remainingPayments: 12,
-  },
-  {
-    id: "LS002",
-    equipmentName: "Haas VF-2",
-    serialNo: "HS789XYZ",
-    customerName: "TechStart Innovation Inc",
-    startDate: "2024-01-10",
-    endDate: "2024-07-10",
-    paymentAmount: 45000,
-    paymentFrequency: "monthly",
-    status: "active",
-    paymentStatus: "overdue",
-    nextPaymentDate: "2024-02-10",
-    totalPaid: 45000,
-    remainingPayments: 5,
-  },
-  {
-    id: "LS003",
-    equipmentName: "Dell Precision 5570",
-    serialNo: "DL456DEF",
-    customerName: "Global Industries Kenya",
-    startDate: "2024-01-01",
-    endDate: "2024-06-30",
-    paymentAmount: 8500,
-    paymentFrequency: "monthly",
-    status: "active",
-    paymentStatus: "pending",
-    nextPaymentDate: "2024-03-01",
-    totalPaid: 17000,
-    remainingPayments: 4,
-  },
-]
-
 export default function LeasesPage() {
-  const [leases] = useState<Lease[]>(MOCK_LEASES)
+  const { toast } = useToast()
+  const [leases, setLeases] = useState<Lease[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [paymentFilter, setPaymentFilter] = useState<string>("all")
@@ -132,6 +88,34 @@ export default function LeasesPage() {
   const activeLeases = leases.filter((l) => l.status === "active").length
   const totalRevenue = leases.reduce((sum, l) => sum + l.totalPaid, 0)
   const overduePayments = leases.filter((l) => l.paymentStatus === "overdue").length
+
+  useEffect(() => {
+    const fetchLeases = async () => {
+      try {
+        const data = await api.getLeases()
+        setLeases(data)
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load leases",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchLeases()
+  }, [])
+
+  if (loading) {
+    return (
+      <ProtectedLayout>
+        <div className="p-6">
+          <div className="text-center">Loading leases...</div>
+        </div>
+      </ProtectedLayout>
+    )
+  }
 
   return (
     <ProtectedLayout>

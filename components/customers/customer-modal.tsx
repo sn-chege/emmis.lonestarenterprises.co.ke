@@ -30,19 +30,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useNotifications } from "@/components/notification-provider"
 
 interface CustomerModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   mode: "add" | "edit" | "view"
   customer: Customer | null
-  onSave: (customer: Partial<Customer>) => void
+  onSave: (customer: Partial<Customer>) => Promise<void>
   onDelete: (customerId: string) => void
 }
 
 export function CustomerModal({ open, onOpenChange, mode, customer, onSave, onDelete }: CustomerModalProps) {
+  const { notifyError } = useNotifications()
   const [formData, setFormData] = useState<Partial<Customer>>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     if (customer && (mode === "edit" || mode === "view")) {
@@ -52,9 +55,17 @@ export function CustomerModal({ open, onOpenChange, mode, customer, onSave, onDe
     }
   }, [customer, mode])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(formData)
+    setIsSubmitting(true)
+    
+    try {
+      await onSave(formData)
+    } catch (err) {
+      notifyError("Error", err instanceof Error ? err.message : 'An error occurred while saving')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleDelete = () => {
@@ -361,8 +372,10 @@ export function CustomerModal({ open, onOpenChange, mode, customer, onSave, onDe
                     Delete
                   </Button>
                 )}
-                <Button type="submit" onClick={handleSubmit}>
-                  {mode === "add" ? (
+                <Button type="submit" onClick={handleSubmit} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    "Saving..."
+                  ) : mode === "add" ? (
                     <>
                       <UserPlus className="w-4 h-4 mr-2" />
                       Add Customer

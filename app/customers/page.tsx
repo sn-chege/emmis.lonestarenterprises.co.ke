@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { ProtectedLayout } from "@/components/protected-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,15 +9,16 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Search, FilterX, Download, Eye, Edit, Package, FileText } from "lucide-react"
-import { MOCK_CUSTOMERS } from "@/lib/mock-data"
+import { api } from "@/lib/api"
 import type { Customer } from "@/lib/types"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { CustomerModal } from "@/components/customers/customer-modal"
-import { useToast } from "@/hooks/use-toast"
+import { useNotifications } from "@/components/notification-provider"
 
 export default function CustomersPage() {
-  const { toast } = useToast()
-  const [customers, setCustomers] = useState<Customer[]>(MOCK_CUSTOMERS)
+  const { notifySuccess, notifyError, notifyDelete } = useNotifications()
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [paymentFilter, setPaymentFilter] = useState<string>("all")
@@ -68,49 +69,47 @@ export default function CustomersPage() {
     setModalOpen(true)
   }
 
-  const handleSaveCustomer = (customerData: Partial<Customer>) => {
-    if (modalMode === "add") {
-      const newCustomer: Customer = {
-        id: `CUST${String(customers.length + 1).padStart(3, "0")}`,
-        status: "Active",
-        contractStatus: "Pending",
-        paymentStatus: "N/A",
-        monthlyAmount: 0,
-        totalEquipment: 0,
-        ...customerData,
-      } as Customer
-
-      setCustomers([...customers, newCustomer])
-      toast({
-        title: "Customer Added",
-        description: `${newCustomer.companyName} has been added successfully.`,
-      })
-    } else if (modalMode === "edit" && selectedCustomer) {
-      setCustomers(customers.map((c) => (c.id === selectedCustomer.id ? { ...c, ...customerData } : c)))
-      toast({
-        title: "Customer Updated",
-        description: `${selectedCustomer.companyName} has been updated successfully.`,
-      })
+  const handleSaveCustomer = async (customerData: Partial<Customer>) => {
+    try {
+      if (modalMode === "add") {
+        const newCustomer = await api.createCustomer({
+          id: `CUST${String(customers.length + 1).padStart(3, "0")}`,
+          status: "Active",
+          contractStatus: "Pending",
+          paymentStatus: "NA",
+          monthlyAmount: 0,
+          totalEquipment: 0,
+          ...customerData,
+        })
+        setCustomers([...customers, newCustomer])
+        notifySuccess("Customer Added", `${newCustomer.companyName} has been added successfully.`)
+        setModalOpen(false)
+      } else if (modalMode === "edit" && selectedCustomer) {
+        const updatedCustomer = await api.updateCustomer(selectedCustomer.id, customerData)
+        setCustomers(customers.map((c) => (c.id === selectedCustomer.id ? updatedCustomer : c)))
+        notifySuccess("Customer Updated", `${updatedCustomer.companyName} has been updated successfully.`)
+        setModalOpen(false)
+      }
+    } catch (error) {
+      // Error will be handled by the modal's notification system
+      throw error
     }
-    setModalOpen(false)
   }
 
-  const handleDeleteCustomer = (customerId: string) => {
-    const customer = customers.find((c) => c.id === customerId)
-    setCustomers(customers.filter((c) => c.id !== customerId))
-    toast({
-      title: "Customer Deleted",
-      description: `${customer?.companyName} has been deleted successfully.`,
-      variant: "destructive",
-    })
-    setModalOpen(false)
+  const handleDeleteCustomer = async (customerId: string) => {
+    try {
+      const customer = customers.find((c) => c.id === customerId)
+      await api.deleteCustomer(customerId)
+      setCustomers(customers.filter((c) => c.id !== customerId))
+      notifyDelete("Customer Deleted", `${customer?.companyName} has been deleted successfully.`)
+      setModalOpen(false)
+    } catch (error) {
+      notifyError("Error", "Failed to delete customer")
+    }
   }
 
   const exportToExcel = () => {
-    toast({
-      title: "Export Started",
-      description: "Exporting customer data to Excel...",
-    })
+    notifySuccess("Export Started", "Exporting customer data to Excel...")
   }
 
   const getPaymentBadgeVariant = (status: string) => {
@@ -137,6 +136,30 @@ export default function CustomersPage() {
       default:
         return "outline"
     }
+  }
+
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const data = await api.getCustomers()
+        setCustomers(data)
+      } catch (error) {
+        notifyError("Error", "Failed to load customers")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchCustomers()
+  }, [])
+
+  if (loading) {
+    return (
+      <ProtectedLayout>
+        <div className="p-6">
+          <div className="text-center">Loading customers...</div>
+        </div>
+      </ProtectedLayout>
+    )
   }
 
   return (

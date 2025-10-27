@@ -18,16 +18,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import type { User, UserRole, UserStatus } from "@/lib/types"
 import { formatDate } from "@/lib/utils/format"
+import { useNotifications } from "@/components/notification-provider"
 
 interface UserModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   mode: "add" | "edit" | "view"
   user: User | null
-  onSave: (user: Partial<User>) => void
+  onSave: (user: Partial<User>) => Promise<void>
 }
 
 export function UserModal({ open, onOpenChange, mode, user, onSave }: UserModalProps) {
+  const { notifyError } = useNotifications()
   const [formData, setFormData] = useState<Partial<User>>({
     name: "",
     email: "",
@@ -36,6 +38,7 @@ export function UserModal({ open, onOpenChange, mode, user, onSave }: UserModalP
     department: "",
     status: "active",
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     if (user && (mode === "edit" || mode === "view")) {
@@ -52,10 +55,18 @@ export function UserModal({ open, onOpenChange, mode, user, onSave }: UserModalP
     }
   }, [user, mode, open])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (mode !== "view") {
-      onSave(formData)
+      setIsSubmitting(true)
+      
+      try {
+        await onSave(formData)
+      } catch (err) {
+        notifyError("Error", err instanceof Error ? err.message : 'An error occurred while saving')
+      } finally {
+        setIsSubmitting(false)
+      }
     }
   }
 
@@ -217,7 +228,11 @@ export function UserModal({ open, onOpenChange, mode, user, onSave }: UserModalP
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {isViewMode ? "Close" : "Cancel"}
             </Button>
-            {!isViewMode && <Button type="submit">{mode === "add" ? "Add User" : "Save Changes"}</Button>}
+            {!isViewMode && (
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : mode === "add" ? "Add User" : "Save Changes"}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

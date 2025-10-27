@@ -30,20 +30,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { MOCK_CUSTOMERS } from "@/lib/mock-data"
+import { api } from "@/lib/api"
+import { useNotifications } from "@/components/notification-provider"
 
 interface AssetModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   mode: "add" | "edit" | "view"
   asset: Asset | null
-  onSave: (asset: Partial<Asset>) => void
+  onSave: (asset: Partial<Asset>) => Promise<void>
   onDelete: (assetId: string) => void
 }
 
 export function AssetModal({ open, onOpenChange, mode, asset, onSave, onDelete }: AssetModalProps) {
+  const { notifyError } = useNotifications()
   const [formData, setFormData] = useState<Partial<Asset>>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [customers, setCustomers] = useState<any[]>([])
 
   useEffect(() => {
     if (asset && (mode === "edit" || mode === "view")) {
@@ -53,9 +57,31 @@ export function AssetModal({ open, onOpenChange, mode, asset, onSave, onDelete }
     }
   }, [asset, mode])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const data = await api.getCustomers()
+        setCustomers(data)
+      } catch (error) {
+        console.error('Failed to fetch customers:', error)
+      }
+    }
+    if (open) {
+      fetchCustomers()
+    }
+  }, [open])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(formData)
+    setIsSubmitting(true)
+    
+    try {
+      await onSave(formData)
+    } catch (err) {
+      notifyError("Error", err instanceof Error ? err.message : 'An error occurred while saving')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleDelete = () => {
@@ -66,7 +92,7 @@ export function AssetModal({ open, onOpenChange, mode, asset, onSave, onDelete }
   }
 
   const handleCustomerChange = (customerId: string) => {
-    const customer = MOCK_CUSTOMERS.find((c) => c.id === customerId)
+    const customer = customers.find((c) => c.id === customerId)
     if (customer) {
       setFormData({
         ...formData,
@@ -327,7 +353,7 @@ export function AssetModal({ open, onOpenChange, mode, asset, onSave, onDelete }
                       <SelectValue placeholder="Select customer" />
                     </SelectTrigger>
                     <SelectContent>
-                      {MOCK_CUSTOMERS.map((customer) => (
+                      {customers.map((customer) => (
                         <SelectItem key={customer.id} value={customer.id}>
                           {customer.companyName}
                         </SelectItem>
@@ -504,8 +530,10 @@ export function AssetModal({ open, onOpenChange, mode, asset, onSave, onDelete }
                     Delete
                   </Button>
                 )}
-                <Button type="submit" onClick={handleSubmit}>
-                  {mode === "add" ? (
+                <Button type="submit" onClick={handleSubmit} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    "Saving..."
+                  ) : mode === "add" ? (
                     <>
                       <Plus className="w-4 h-4 mr-2" />
                       Add Equipment
