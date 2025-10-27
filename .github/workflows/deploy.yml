@@ -20,7 +20,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies and build
-        run: npm ci --legacy-peer-deps
+        run: npm install --legacy-peer-deps && npm run build
 
       - name: Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -29,7 +29,7 @@ jobs:
           username: ${{ secrets.CICD_SFTP_USER }}
           password: ${{ secrets.CICD_SFTP_PASSWORD }}
           local-dir: ./
-          server-dir: ./
+          s erver-dir: ./
           exclude: |
             **/.git*
             **/.git*/**
