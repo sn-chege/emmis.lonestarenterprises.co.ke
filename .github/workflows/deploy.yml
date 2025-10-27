@@ -34,5 +34,5 @@ jobs:
           username: ${{ secrets.CICD_SFTP_USER }}
           password: ${{ secrets.CICD_SFTP_PASSWORD }}
           local-dir: ./.next/
-          server-dir: /home/lonestar/emmis.lonestarenterprises.co.ke/
+          server-dir: ./
           dangerous-clean-slate: false
