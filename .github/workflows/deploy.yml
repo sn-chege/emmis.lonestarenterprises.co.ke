@@ -25,11 +25,6 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Seed Database
-        run: npm run db:seeders
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
       - name: Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
