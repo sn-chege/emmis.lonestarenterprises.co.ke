@@ -47,3 +47,20 @@ jobs:
             **/node_modules/**
             **/db_backups/**
           dangerous-clean-slate: false
+
+      - name: Fix Prisma Client on Server
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.CICD_SFTP_HOST }}
+          username: ${{ secrets.CICD_SFTP_USER }}
+          password: ${{ secrets.CICD_SFTP_PASSWORD }}
+          local-dir: ./
+          server-dir: ./
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/db_backups/**
+          dangerous-clean-slate: false
+          server-side-commands: |
+            cp -r .prisma/* node_modules/.prisma/
+            cp -r @prisma/* node_modules/@prisma/
