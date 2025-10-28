@@ -1,3 +1,4 @@
+// Updated for cPanel compatibility
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-1.0.x", "debian-openssl-3.0.x"]
