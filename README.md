@@ -164,8 +164,11 @@ All relationships are properly defined with foreign keys and cascading deletes w
 After each automated deployment, you need to run these commands on the server to fix Prisma client compatibility:
 
 ```bash
+npm install --legacy-peer-deps
 cp -r .prisma/* node_modules/.prisma/
 cp -r @prisma/* node_modules/@prisma/
 ```
+
+Additionally in Cpanel Menu > Node JS , add a new node JS app and add params : "DATABASE_URL" and "NODE_ENV"
 
 This is required because CloudLinux NodeJS Selector manages `node_modules` separately from the deployment process.
