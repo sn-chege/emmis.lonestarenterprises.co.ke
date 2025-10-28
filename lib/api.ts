@@ -17,6 +17,7 @@ class ApiClient {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Network error' }))
         const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`
+        console.error('API Error:', { status: response.status, statusText: response.statusText, errorData })
         throw new Error(errorMessage)
       }
 
@@ -210,6 +211,55 @@ class ApiClient {
       body: JSON.stringify({ email, password }),
     })
   }
+
+  // Activity Logs
+  async getActivityLogs(userId?: string, limit = 10) {
+    const params = new URLSearchParams()
+    if (userId) params.append('userId', userId)
+    params.append('limit', limit.toString())
+    return this.request(`/activity-logs?${params.toString()}`)
+  }
 }
 
 export const api = new ApiClient()
+
+// Dashboard stats helper
+export async function getDashboardStats() {
+  try {
+    const [users, customers, assets, workOrders, maintenance, leases] = await Promise.all([
+      api.getUsers(),
+      api.getCustomers(), 
+      api.getAssets(),
+      api.getWorkOrders(),
+      api.getMaintenanceSchedules(),
+      api.getLeases()
+    ])
+
+    return {
+      users: users.length,
+      customers: customers.length,
+      assets: assets.length,
+      workOrders: workOrders.length,
+      maintenance: maintenance.length,
+      leases: leases.length,
+      activeWorkOrders: workOrders.filter((wo: any) => wo.status === 'open' || wo.status === 'inProgress').length,
+      overdueWorkOrders: workOrders.filter((wo: any) => new Date(wo.dueDate) < new Date() && wo.status !== 'completed').length,
+      activeMaintenance: maintenance.filter((m: any) => m.status === 'scheduled' || m.status === 'inProgress').length,
+      activeLeases: leases.filter((l: any) => l.status === 'active').length
+    }
+  } catch (error) {
+    console.error('Failed to fetch dashboard stats:', error)
+    return {
+      users: 0,
+      customers: 0,
+      assets: 0,
+      workOrders: 0,
+      maintenance: 0,
+      leases: 0,
+      activeWorkOrders: 0,
+      overdueWorkOrders: 0,
+      activeMaintenance: 0,
+      activeLeases: 0
+    }
+  }
+}

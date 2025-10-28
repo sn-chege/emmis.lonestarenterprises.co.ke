@@ -1,0 +1,21 @@
+CREATE TABLE `activity_logs` (
+  `id` VARCHAR(50) NOT NULL,
+  `user_id` VARCHAR(50) NOT NULL,
+  `user_name` VARCHAR(255) NOT NULL,
+  `action` ENUM('login', 'logout', 'create', 'update', 'delete', 'view') NOT NULL,
+  `module` VARCHAR(100) NOT NULL,
+  `entity_type` VARCHAR(100) NOT NULL,
+  `entity_id` VARCHAR(50) NULL,
+  `entity_name` VARCHAR(255) NULL,
+  `description` TEXT NOT NULL,
+  `ip_address` VARCHAR(45) NULL,
+  `user_agent` TEXT NULL,
+  `metadata` TEXT NULL,
+  `created_date` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  INDEX `activity_logs_user_id_idx` (`user_id`),
+  INDEX `activity_logs_action_idx` (`action`),
+  INDEX `activity_logs_module_idx` (`module`),
+  INDEX `activity_logs_created_date_idx` (`created_date`),
+  CONSTRAINT `activity_logs_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

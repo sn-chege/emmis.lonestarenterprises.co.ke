@@ -23,6 +23,8 @@ model User {
   createdDate  DateTime  @default(now()) @map("created_date")
   updatedDate  DateTime  @default(now()) @updatedAt @map("updated_date")
 
+  activityLogs ActivityLog[]
+
   @@index([email])
   @@index([role])
   @@index([status])
@@ -311,6 +313,30 @@ model SystemSetting {
   @@map("system_settings")
 }
 
+model ActivityLog {
+  id          String       @id @default(cuid()) @db.VarChar(50)
+  userId      String       @map("user_id") @db.VarChar(50)
+  userName    String       @map("user_name") @db.VarChar(255)
+  action      ActivityAction
+  module      String       @db.VarChar(100)
+  entityType  String       @map("entity_type") @db.VarChar(100)
+  entityId    String?      @map("entity_id") @db.VarChar(50)
+  entityName  String?      @map("entity_name") @db.VarChar(255)
+  description String       @db.Text
+  ipAddress   String?      @map("ip_address") @db.VarChar(45)
+  userAgent   String?      @map("user_agent") @db.Text
+  metadata    String?      @db.Text
+  createdDate DateTime     @default(now()) @map("created_date")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([module])
+  @@index([createdDate])
+  @@map("activity_logs")
+}
+
 enum UserRole {
   admin
   supervisor
@@ -439,4 +465,13 @@ enum ReportStatus {
   completed
   processing
   failed
+}
+
+enum ActivityAction {
+  login
+  logout
+  create
+  update
+  delete
+  view
 }

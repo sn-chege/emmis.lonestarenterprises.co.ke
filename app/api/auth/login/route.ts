@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import { logActivity } from '@/lib/activity-log'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +25,20 @@ export async function POST(request: NextRequest) {
     await prisma.user.update({
       where: { id: user.id },
       data: { lastLogin: new Date() },
+    })
+    
+    // Log login activity
+    await logActivity({
+      userId: user.id,
+      userName: user.name,
+      action: 'login',
+      module: 'Authentication',
+      entityType: 'User',
+      entityId: user.id,
+      entityName: user.name,
+      description: `User ${user.name} logged in`,
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      userAgent: request.headers.get('user-agent') || undefined
     })
     
     const { passwordHash, ...userWithoutPassword } = user

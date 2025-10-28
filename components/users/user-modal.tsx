@@ -30,13 +30,14 @@ interface UserModalProps {
 
 export function UserModal({ open, onOpenChange, mode, user, onSave }: UserModalProps) {
   const { notifyError } = useNotifications()
-  const [formData, setFormData] = useState<Partial<User>>({
+  const [formData, setFormData] = useState<Partial<User & { password?: string }>>({
     name: "",
     email: "",
     phone: "",
     role: "technician",
     department: "",
     status: "active",
+    password: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -51,6 +52,7 @@ export function UserModal({ open, onOpenChange, mode, user, onSave }: UserModalP
         role: "technician",
         department: "",
         status: "active",
+        password: "",
       })
     }
   }, [user, mode, open])
@@ -126,6 +128,20 @@ export function UserModal({ open, onOpenChange, mode, user, onSave }: UserModalP
                 />
               </div>
             </div>
+
+            {(mode === "add" || mode === "edit") && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Password *</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password || ""}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required={mode === "add"}
+                  placeholder={mode === "edit" ? "Leave blank to keep current password" : "Enter password"}
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

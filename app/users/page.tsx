@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { UserPlus, Search, MoreVertical, Eye, Edit, Trash2, Users, UserCheck, UserX } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { UserModal } from "@/components/users/user-modal"
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog"
 import { api } from "@/lib/api"
 import type { User, UserRole, UserStatus } from "@/lib/types"
 import { formatDate } from "@/lib/utils/format"
@@ -26,6 +27,9 @@ export default function UsersPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add")
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -57,15 +61,27 @@ export default function UsersPage() {
     setModalOpen(true)
   }
 
-  const handleDeleteUser = async (userId: string) => {
-    if (confirm("Are you sure you want to delete this user?")) {
-      try {
-        await api.deleteUser(userId)
-        setUsers(users.filter((u) => u.id !== userId))
-        notifyDelete("User Deleted", "User has been deleted successfully.")
-      } catch (error) {
-        notifyError("Error", "Failed to delete user")
-      }
+  const handleDeleteUser = (user: User) => {
+    setUserToDelete(user)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return
+    
+    setIsDeleting(true)
+    try {
+      await api.deleteUser(userToDelete.id)
+      setUsers(users.filter((u) => u.id !== userToDelete.id))
+      notifyDelete("User Deleted", `${userToDelete.name} has been deleted successfully.`)
+      setDeleteDialogOpen(false)
+      setUserToDelete(null)
+    } catch (error) {
+      console.error('Delete user error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete user'
+      notifyError("Delete Failed", errorMessage)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -276,7 +292,7 @@ export default function UsersPage() {
                                 <Edit className="mr-2 h-4 w-4" />
                                 Edit User
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDeleteUser(user.id)} className="text-destructive">
+                              <DropdownMenuItem onClick={() => handleDeleteUser(user)} className="text-destructive">
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete User
                               </DropdownMenuItem>
@@ -298,6 +314,15 @@ export default function UsersPage() {
           mode={modalMode}
           user={selectedUser}
           onSave={handleSaveUser}
+        />
+
+        <DeleteConfirmationDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete User"
+          description={`Are you sure you want to delete ${userToDelete?.name}? This action cannot be undone and will permanently remove the user from the system.`}
+          onConfirm={confirmDeleteUser}
+          isLoading={isDeleting}
         />
       </div>
     </ProtectedLayout>

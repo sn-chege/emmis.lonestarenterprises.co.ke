@@ -119,6 +119,9 @@ tsx scripts/migrate.ts seed
 - `PUT /api/maintenance/[id]` - Update maintenance
 - `DELETE /api/maintenance/[id]` - Delete maintenance
 
+### Activity Logs
+- `GET /api/activity-logs` - Get activity logs (with optional userId and limit params)
+
 ## Default Admin Credentials
 - Email: `admin45@emmis.com`
 - Password: `qwertyhudra45678911`
@@ -128,7 +131,7 @@ tsx scripts/migrate.ts seed
 Use the API client in your components:
 
 ```typescript
-import { api } from '@/lib/api'
+import { api, getDashboardStats } from '@/lib/api'
 
 // Get all customers
 const customers = await api.getCustomers()
@@ -143,7 +146,29 @@ const user = await api.createUser({
 
 // Login
 const result = await api.login('admin45@emmis.com', 'qwertyhudra45678911')
+
+// Get dashboard statistics
+const stats = await getDashboardStats()
+
+// Get activity logs
+const activities = await api.getActivityLogs('userId', 10)
 ```
+
+## Activity Logging
+
+The system automatically logs all user activities including:
+- Login/logout events
+- Create, update, delete operations
+- Module access and interactions
+
+Activity logs include:
+- User information
+- Action performed
+- Entity affected
+- Timestamp and IP address
+- User agent information
+
+Admins can view all activities, while other users see only their own activities.
 
 ## Database Schema
 
@@ -156,6 +181,7 @@ The system includes the following entities:
 - Leases (with payment history)
 - Reports
 - System Settings
+- Activity Logs (audit trail for all user actions)
 
 All relationships are properly defined with foreign keys and cascading deletes where appropriate.
 
@@ -167,6 +193,11 @@ After each automated deployment, you need to run these commands on the server to
 npm install --legacy-peer-deps
 cp -r .prisma/* node_modules/.prisma/
 cp -r @prisma/* node_modules/@prisma/
+
+Or use the npm script:
+```bash
+npm run prisma:fix
+```
 ```
 
 Additionally in Cpanel Menu > Node JS , add a new node JS app and add params : "DATABASE_URL" and "NODE_ENV"

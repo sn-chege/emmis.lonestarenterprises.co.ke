@@ -35,7 +35,13 @@ export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const user = getCurrentUser()
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    // Start collapsed on mobile
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 768
+    }
+    return false
+  })
 
   const handleLogout = () => {
     logout()
@@ -49,6 +55,8 @@ export function AppSidebar() {
       className={cn(
         "flex flex-col h-screen bg-slate-900 text-white transition-all duration-300",
         collapsed ? "w-16" : "w-64",
+        "md:relative absolute z-50 md:z-auto",
+        collapsed && "md:w-16 w-16"
       )}
     >
       <div className="flex items-center justify-between p-4 border-b border-slate-800">
