@@ -30,6 +30,7 @@ jobs:
           cp -r node_modules/.prisma ./
           cp -r node_modules/@prisma ./
           # Copy back to node_modules for deployment
+          # Need to run this post migration on Terminnal
           # cp -r .prisma/* node_modules/.prisma/
           # cp -r @prisma/* node_modules/@prisma/
 
@@ -48,4 +49,5 @@ jobs:
             **/.git*
             **/.git*/**
             **/db_backups/**
-          dangerous-clean-slate: true
+            **/node_modules/**
+          dangerous-clean-slate: false
