@@ -40,5 +40,7 @@ jobs:
             **/.git*
             **/.git*/**
             **/node_modules/**
+            !**/node_modules/.prisma/**
+            !**/node_modules/@prisma/**
             **/db_backups/**
           dangerous-clean-slate: false
