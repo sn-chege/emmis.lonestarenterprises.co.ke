@@ -29,9 +29,6 @@ jobs:
         run: |
           cp -r node_modules/.prisma ./
           cp -r node_modules/@prisma ./
-          # Copy back to node_modules for deployment
-          cp -r .prisma/* node_modules/.prisma/
-          cp -r @prisma/* node_modules/@prisma/
 
       - name: Build Next.js App
         run: npm run build
@@ -47,5 +44,26 @@ jobs:
           exclude: |
             **/.git*
             **/.git*/**
+            **/node_modules/**
             **/db_backups/**
+          dangerous-clean-slate:  false
+
+      - name: Deploy Prisma Client to node_modules
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.CICD_SFTP_HOST }}
+          username: ${{ secrets.CICD_SFTP_USER }}
+          password: ${{ secrets.CICD_SFTP_PASSWORD }}
+          local-dir: ./.prisma/
+          server-dir: ./node_modules/.prisma/
+          dangerous-clean-slate: false
+
+      - name: Deploy Prisma Package to node_modules
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.CICD_SFTP_HOST }}
+          username: ${{ secrets.CICD_SFTP_USER }}
+          password: ${{ secrets.CICD_SFTP_PASSWORD }}
+          local-dir: ./@prisma/
+          server-dir: ./node_modules/@prisma/
           dangerous-clean-slate: false
