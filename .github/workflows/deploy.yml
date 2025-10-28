@@ -30,9 +30,8 @@ jobs:
           cp -r node_modules/.prisma ./
           cp -r node_modules/@prisma ./
           # Copy back to node_modules for deployment
-          # Need to run this post migration on Terminnal
-          # cp -r .prisma/* node_modules/.prisma/
-          # cp -r @prisma/* node_modules/@prisma/
+          cp -r .prisma/* node_modules/.prisma/
+          cp -r @prisma/* node_modules/@prisma/
 
       - name: Build Next.js App
         run: npm run build
@@ -49,5 +48,4 @@ jobs:
             **/.git*
             **/.git*/**
             **/db_backups/**
-            **/node_modules/**
           dangerous-clean-slate: false
