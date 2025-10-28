@@ -158,3 +158,14 @@ The system includes the following entities:
 - System Settings
 
 All relationships are properly defined with foreign keys and cascading deletes where appropriate.
+
+## cPanel CI/CD Deployment
+
+After each automated deployment, you need to run these commands on the server to fix Prisma client compatibility:
+
+```bash
+cp -r .prisma/* node_modules/.prisma/
+cp -r @prisma/* node_modules/@prisma/
+```
+
+This is required because CloudLinux NodeJS Selector manages `node_modules` separately from the deployment process.

@@ -16,7 +16,9 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:seeders": "tsx scripts/seeders.ts",
     "db:seeders:js": "node scripts/seeders.js",
-    "db:backup": "tsx scripts/backup-db.ts"
+    "db:backup": "tsx scripts/backup-db.ts",
+    "prisma:fix": "cp -r .prisma/* node_modules/.prisma/ && cp -r @prisma/* node_modules/@prisma/",
+    "prisma": "prisma"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
