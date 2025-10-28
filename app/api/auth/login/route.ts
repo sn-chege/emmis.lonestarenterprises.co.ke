@@ -33,6 +33,6 @@ export async function POST(request: NextRequest) {
       message: 'Login successful'
     })
   } catch (error) {
-    return NextResponse.json({ error: 'Login failed: ' +   error }, { status: 500 })
+    return NextResponse.json({ error: 'Login failed: ' +     error }, { status: 500 })
   }
 }

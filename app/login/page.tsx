@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { api } from "@/lib/api"
 import { Wrench, AlertCircle, Cog, Users, TrendingUp, Shield } from "lucide-react"
+import { DatabaseStatus } from "@/components/database-status"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -51,7 +52,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col">
+      <DatabaseStatus />
+      <div className="flex-1 flex">
       {/* Left Side - Login Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
         <div className="w-full max-w-md space-y-8">
@@ -200,6 +203,7 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )
