@@ -49,4 +49,4 @@ jobs:
             !**/node_modules/.prisma/**
             !**/node_modules/@prisma/**
             **/db_backups/**
-          dangerous-clean-slate: false
+          dangerous-clean-slate: true
