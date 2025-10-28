@@ -28,6 +28,12 @@ jobs:
       - name: Build Next.js App
         run: npm run build
 
+      - name: Copy Prisma Client
+        run: |
+          mkdir -p prisma-client
+          cp -r node_modules/.prisma prisma-client/
+          cp -r node_modules/@prisma prisma-client/
+
       - name: Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
@@ -40,6 +46,7 @@ jobs:
             **/.git*
             **/.git*/**
             **/node_modules/**
+            **/db_backups/**
             !**/node_modules/.prisma/**
             !**/node_modules/@prisma/**
             **/db_backups/**
