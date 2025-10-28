@@ -1,6 +1,6 @@
 # EMMIS - Equipment Maintenance Management Information System
 
-A comprehensive backend system for managing equipment maintenance, customers, assets, work orders, and more.
+A comprehensive backend system for managing and maintaining equipment, customers, assets, work orders, and more.
 
 ## Backend Features
 
