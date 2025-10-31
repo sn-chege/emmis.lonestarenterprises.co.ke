@@ -11,18 +11,48 @@ class ApiClient {
       ...options,
     }
 
+    console.log('=== API REQUEST START ===')
+    console.log('URL:', url)
+    console.log('Method:', config.method || 'GET')
+    console.log('Body:', config.body)
+    
     try {
+      console.log('About to call fetch...')
       const response = await fetch(url, config)
+      console.log('Fetch completed. Response:', response)
+      console.log('Response ok:', response.ok)
+      console.log('Response status:', response.status)
+      console.log('Response type:', typeof response)
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Network error' }))
-        const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`
-        console.error('API Error:', { status: response.status, statusText: response.statusText, errorData })
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`
+        
+        try {
+          const responseText = await response.text()
+          console.error('Raw response text:', responseText)
+          
+          if (responseText) {
+            const errorData = JSON.parse(responseText)
+            console.error('Parsed error data:', errorData)
+            
+            if (errorData.error) {
+              errorMessage = errorData.error
+              if (errorData.details && errorData.details.includes('assets_serial_number_key')) {
+                errorMessage = 'Asset with this serial number already exists'
+              }
+            }
+          }
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError)
+          // Keep the HTTP status message if we can't parse the response
+        }
+        
         throw new Error(errorMessage)
       }
 
       return response.json()
     } catch (error) {
+      console.error('Request failed:', error)
       if (error instanceof Error) {
         throw error
       }

@@ -16,9 +16,10 @@ import {
   Settings,
   LogOut,
   Menu,
+  X,
 } from "lucide-react"
 import { getCurrentUser, logout } from "@/lib/auth"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -42,6 +43,17 @@ export function AppSidebar() {
     }
     return false
   })
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const handleLogout = () => {
     logout()
@@ -50,13 +62,35 @@ export function AppSidebar() {
 
   const filteredNav = navigation.filter((item) => !item.adminOnly || user?.role === "admin")
 
+  // Mobile top bar
+  if (isMobile && collapsed) {
+    return (
+      <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900 text-white p-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <Settings className="w-5 h-5" />
+          </div>
+          <span className="font-bold text-lg">EMMIS</span>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setCollapsed(false)}
+          className="text-white hover:bg-slate-800"
+        >
+          <Menu className="w-5 h-5" />
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <div
       className={cn(
         "flex flex-col h-screen bg-slate-900 text-white transition-all duration-300",
         collapsed ? "w-16" : "w-64",
-        "md:relative absolute z-50 md:z-auto",
-        collapsed && "md:w-16 w-16"
+        "md:relative",
+        isMobile && !collapsed ? "fixed inset-0 z-50" : "relative"
       )}
     >
       <div className="flex items-center justify-between p-4 border-b border-slate-800">
@@ -74,7 +108,7 @@ export function AppSidebar() {
           onClick={() => setCollapsed(!collapsed)}
           className="text-white hover:bg-slate-800"
         >
-          <Menu className="w-5 h-5" />
+          {collapsed ? <Menu className="w-5 h-5" /> : <X className="w-5 h-5" />}
         </Button>
       </div>
 

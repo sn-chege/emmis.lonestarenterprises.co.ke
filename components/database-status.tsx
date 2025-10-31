@@ -38,14 +38,7 @@ export function DatabaseStatus() {
   }
 
   if (status === 'connected') {
-    return (
-      <div className="bg-green-50 border-b border-green-200 px-4 py-2">
-        <div className="flex items-center justify-center gap-2 text-green-800">
-          <CheckCircle className="h-4 w-4" />
-          <span className="text-sm">Database connected successfully</span>
-        </div>
-      </div>
-    )
+    return null
   }
 
   return (

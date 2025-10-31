@@ -3,10 +3,11 @@ import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { logActivity } from '@/lib/activity-log'
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         email: true,
@@ -31,8 +32,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const data = await request.json()
     const updateData: any = { ...data }
     
@@ -43,7 +45,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
     
     const user = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       select: {
         id: true,
@@ -73,14 +75,19 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     
     return NextResponse.json(user)
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 })
+    console.error('Update user error:', error)
+    return NextResponse.json({ 
+      error: 'Failed to update user', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 })
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { name: true }
     })
     
@@ -90,12 +97,15 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     
     // Delete user first
     await prisma.user.delete({
-      where: { id: params.id },
+      where: { id },
     })
     
     return NextResponse.json({ message: 'User deleted successfully' })
   } catch (error) {
     console.error('Delete user error:', error)
-    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 })
+    return NextResponse.json({ 
+      error: 'Failed to delete user', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 })
   }
 }

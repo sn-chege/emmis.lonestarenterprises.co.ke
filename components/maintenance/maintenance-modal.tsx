@@ -17,8 +17,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import type { MaintenanceRecord } from "@/lib/types"
-import { MOCK_ASSETS } from "@/lib/mock-data"
+import type { MaintenanceRecord, Asset, User } from "@/lib/types"
+import { api } from "@/lib/api"
 import { formatDate } from "@/lib/utils/format"
 
 interface MaintenanceModalProps {
@@ -29,15 +29,13 @@ interface MaintenanceModalProps {
   onSave: (data: MaintenanceRecord) => void
 }
 
-const TECHNICIANS = [
-  { id: "USR003", name: "John Smith" },
-  { id: "USR004", name: "Mike Johnson" },
-  { id: "USR005", name: "Sarah Wilson" },
-]
+
 
 export function MaintenanceModal({ open, onOpenChange, mode, maintenance, onSave }: MaintenanceModalProps) {
   const [formData, setFormData] = useState<Partial<MaintenanceRecord>>({})
   const [showFaultField, setShowFaultField] = useState(false)
+  const [assets, setAssets] = useState<Asset[]>([])
+  const [technicians, setTechnicians] = useState<User[]>([])
 
   useEffect(() => {
     if (maintenance) {
@@ -55,6 +53,18 @@ export function MaintenanceModal({ open, onOpenChange, mode, maintenance, onSave
     }
   }, [maintenance, open])
 
+  useEffect(() => {
+    if (open) {
+      Promise.all([
+        api.getAssets(),
+        api.getUsers()
+      ]).then(([assetsData, usersData]) => {
+        setAssets(assetsData)
+        setTechnicians(usersData.filter((user: User) => user.role === 'technician'))
+      }).catch(console.error)
+    }
+  }, [open])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -71,12 +81,12 @@ export function MaintenanceModal({ open, onOpenChange, mode, maintenance, onSave
       } as MaintenanceRecord)
     } else {
       const newId = mode === "add" ? `MT${String(Date.now()).slice(-3)}` : formData.id
-      const asset = MOCK_ASSETS.find((a) => a.id === formData.equipmentId)
+      const asset = assets.find((a) => a.id === formData.equipmentId)
 
       onSave({
         ...formData,
         id: newId!,
-        equipmentName: asset?.make + " " + asset?.model || "",
+        equipmentName: asset ? `${asset.make} ${asset.model}` : "",
         serialNo: asset?.serialNumber || "",
         customerId: asset?.customerId,
         customerName: asset?.customerName,
@@ -311,13 +321,13 @@ export function MaintenanceModal({ open, onOpenChange, mode, maintenance, onSave
             <div className="space-y-2">
               <Label htmlFor="technicianId">Reassign Technician</Label>
               <Select
-                value={formData.technicianId || ""}
+                value={formData.technicianId || "unassigned"}
                 onValueChange={(value) => {
-                  const tech = TECHNICIANS.find((t) => t.id === value)
+                  const tech = technicians.find((t) => t.id === value)
                   setFormData({
                     ...formData,
-                    technicianId: value || null,
-                    technicianName: tech?.name || null,
+                    technicianId: value === "unassigned" ? null : value,
+                    technicianName: value === "unassigned" ? null : tech?.name || null,
                   })
                 }}
               >
@@ -325,8 +335,8 @@ export function MaintenanceModal({ open, onOpenChange, mode, maintenance, onSave
                   <SelectValue placeholder="Keep current assignment" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Keep current assignment</SelectItem>
-                  {TECHNICIANS.map((tech) => (
+                  <SelectItem value="unassigned">Keep current assignment</SelectItem>
+                  {technicians.map((tech) => (
                     <SelectItem key={tech.id} value={tech.id}>
                       {tech.name}
                     </SelectItem>
@@ -368,7 +378,7 @@ export function MaintenanceModal({ open, onOpenChange, mode, maintenance, onSave
                   <SelectValue placeholder="Select equipment" />
                 </SelectTrigger>
                 <SelectContent>
-                  {MOCK_ASSETS.map((asset) => (
+                  {assets.map((asset) => (
                     <SelectItem key={asset.id} value={asset.id}>
                       {asset.make} {asset.model} ({asset.serialNumber})
                     </SelectItem>
@@ -413,13 +423,13 @@ export function MaintenanceModal({ open, onOpenChange, mode, maintenance, onSave
             <div className="space-y-2">
               <Label htmlFor="technicianId">Assigned Technician</Label>
               <Select
-                value={formData.technicianId || ""}
+                value={formData.technicianId || "unassigned"}
                 onValueChange={(value) => {
-                  const tech = TECHNICIANS.find((t) => t.id === value)
+                  const tech = technicians.find((t) => t.id === value)
                   setFormData({
                     ...formData,
-                    technicianId: value || null,
-                    technicianName: tech?.name || null,
+                    technicianId: value === "unassigned" ? null : value,
+                    technicianName: value === "unassigned" ? null : tech?.name || null,
                   })
                 }}
               >
@@ -427,8 +437,8 @@ export function MaintenanceModal({ open, onOpenChange, mode, maintenance, onSave
                   <SelectValue placeholder="Unassigned" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
-                  {TECHNICIANS.map((tech) => (
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {technicians.map((tech) => (
                     <SelectItem key={tech.id} value={tech.id}>
                       {tech.name}
                     </SelectItem>

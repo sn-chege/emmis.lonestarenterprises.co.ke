@@ -2,6 +2,8 @@ export type UserRole = "admin" | "supervisor" | "technician"
 
 export type UserStatus = "active" | "inactive" | "suspended"
 
+
+
 export interface User {
   id: string
   email: string
@@ -13,6 +15,12 @@ export interface User {
   status: UserStatus
   lastLogin?: string
   createdDate: string
+  // Technician-specific fields
+  specialization?: string
+  experience?: number
+  supervisorId?: string
+  supervisorName?: string
+  hireDate?: string
 }
 
 export type CustomerStatus = "Active" | "Inactive" | "Pending" | "Suspended"
@@ -161,3 +169,5 @@ export interface MaintenanceTemplate {
   checklist: string[]
   notes?: string
 }
+
+

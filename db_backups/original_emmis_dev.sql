@@ -445,11 +445,18 @@ CREATE TABLE `users` (
   `last_login` datetime(3) DEFAULT NULL,
   `created_date` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_date` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `specialization` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `experience` int DEFAULT 0,
+  `supervisor_id` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `supervisor_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `hire_date` date DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `users_email_key` (`email`),
   KEY `users_email_idx` (`email`),
   KEY `users_role_idx` (`role`),
-  KEY `users_status_idx` (`status`)
+  KEY `users_status_idx` (`status`),
+  KEY `users_supervisor_id_idx` (`supervisor_id`),
+  CONSTRAINT `users_supervisor_id_fkey` FOREIGN KEY (`supervisor_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -459,7 +466,10 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES ('USR001','admin45@emmis.com','$2a$10$nyaFDBxkGIeGWZSpaf8h8eZZQMlRUa/SaKjZeLSJK.JU5LyjSI2zi','System Administrator','admin',NULL,NULL,NULL,'active','2025-10-27 18:50:44.643','2025-10-27 14:34:26.721','2025-10-27 18:50:44.646');
+INSERT INTO `users` VALUES 
+('USR001','admin45@emmis.com','$2a$10$nyaFDBxkGIeGWZSpaf8h8eZZQMlRUa/SaKjZeLSJK.JU5LyjSI2zi','System Administrator','admin',NULL,NULL,NULL,'active','2025-10-27 18:50:44.643','2025-10-27 14:34:26.721','2025-10-27 18:50:44.646',NULL,0,NULL,NULL,NULL),
+('USR002','supervisor@emmis.com','$2a$10$nyaFDBxkGIeGWZSpaf8h8eZZQMlRUa/SaKjZeLSJK.JU5LyjSI2zi','John Supervisor','supervisor',NULL,'+254712345678','Operations','active',NULL,'2025-10-27 14:34:26.721','2025-10-27 14:34:26.721',NULL,0,NULL,NULL,NULL),
+('USR003','technician@emmis.com','$2a$10$nyaFDBxkGIeGWZSpaf8h8eZZQMlRUa/SaKjZeLSJK.JU5LyjSI2zi','Mike Technician','technician',NULL,'+254787654321','Field Service','active',NULL,'2025-10-27 14:34:26.721','2025-10-27 14:34:26.721','Equipment Maintenance',2,'USR002','John Supervisor','2023-01-15');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 

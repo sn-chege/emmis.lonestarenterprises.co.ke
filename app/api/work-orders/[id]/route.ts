@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const workOrder = await prisma.workOrder.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         consumableParts: true,
       },
@@ -20,13 +21,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const data = await request.json()
     const { consumableParts, ...workOrderData } = data
     
     const workOrder = await prisma.workOrder.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...workOrderData,
         consumableParts: consumableParts ? {
@@ -41,17 +43,26 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     
     return NextResponse.json(workOrder)
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update work order' }, { status: 500 })
+    console.error('Update work order error:', error)
+    return NextResponse.json({ 
+      error: 'Failed to update work order', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 })
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     await prisma.workOrder.delete({
-      where: { id: params.id },
+      where: { id },
     })
     return NextResponse.json({ message: 'Work order deleted successfully' })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete work order' }, { status: 500 })
+    console.error('Delete work order error:', error)
+    return NextResponse.json({ 
+      error: 'Failed to delete work order', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 })
   }
 }

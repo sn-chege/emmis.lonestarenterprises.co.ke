@@ -27,6 +27,10 @@ export async function POST(request: NextRequest) {
     })
     return NextResponse.json(lease, { status: 201 })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create lease' }, { status: 500 })
+    console.error('Create lease error:', error)
+    return NextResponse.json({ 
+      error: 'Failed to create lease', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 })
   }
 }

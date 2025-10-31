@@ -44,8 +44,8 @@ export default function LoginPage() {
   const fillDemo = (role: "admin" | "supervisor" | "technician") => {
     const demos = {
       admin: { email: "admin45@emmis.com", password: "qwertyhudra45678911" },
-      supervisor: { email: "supervisor45@emmis.com", password: "qwertyhudra45678911" },
-      technician: { email: "tech45@emmis.com", password: "qwertyhudra45678911" },
+      supervisor: { email: "supervisor@emmis.com", password: "qwertyhudra45678911" },
+      technician: { email: "technician@emmis.com", password: "qwertyhudra45678911" },
     }
     setEmail(demos[role].email)
     setPassword(demos[role].password)

@@ -17,7 +17,30 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
-    const { consumableParts, ...workOrderData } = data
+    const { consumableParts, ...rawData } = data
+    
+    // Generate work order ID
+    const lastWorkOrder = await prisma.workOrder.findFirst({
+      orderBy: { id: 'desc' },
+      select: { id: true }
+    })
+    
+    let nextNumber = 1
+    if (lastWorkOrder) {
+      const lastNumber = parseInt(lastWorkOrder.id.replace('WO', ''))
+      nextNumber = lastNumber + 1
+    }
+    
+    const workOrderId = `WO${String(nextNumber).padStart(3, '0')}`
+    
+    // Convert date fields
+    const workOrderData = {
+      ...rawData,
+      id: workOrderId,
+      dueDate: rawData.dueDate ? new Date(rawData.dueDate) : new Date(),
+      completedDate: rawData.completedDate ? new Date(rawData.completedDate) : null,
+      nextServiceDate: rawData.nextServiceDate ? new Date(rawData.nextServiceDate) : null,
+    }
     
     const workOrder = await prisma.workOrder.create({
       data: {
@@ -33,6 +56,10 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(workOrder, { status: 201 })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create work order' }, { status: 500 })
+    console.error('Create work order error:', error)
+    return NextResponse.json({ 
+      error: 'Failed to create work order', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 })
   }
 }

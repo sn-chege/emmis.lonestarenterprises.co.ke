@@ -22,12 +22,22 @@ model User {
   lastLogin    DateTime? @map("last_login")
   createdDate  DateTime  @default(now()) @map("created_date")
   updatedDate  DateTime  @default(now()) @updatedAt @map("updated_date")
+  
+  // Technician-specific fields
+  specialization String? @db.VarChar(255)
+  experience     Int?    @default(0)
+  supervisorId   String? @map("supervisor_id") @db.VarChar(50)
+  supervisorName String? @map("supervisor_name") @db.VarChar(255)
+  hireDate       DateTime? @map("hire_date") @db.Date
 
   activityLogs ActivityLog[]
+  supervisedTechnicians User[] @relation("SupervisorTechnician")
+  supervisor User? @relation("SupervisorTechnician", fields: [supervisorId], references: [id], onDelete: SetNull)
 
   @@index([email])
   @@index([role])
   @@index([status])
+  @@index([supervisorId])
   @@map("users")
 }
 
@@ -466,6 +476,8 @@ enum ReportStatus {
   processing
   failed
 }
+
+
 
 enum ActivityAction {
   login

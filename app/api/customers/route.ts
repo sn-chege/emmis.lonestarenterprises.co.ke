@@ -18,8 +18,30 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
+    
+    // Generate unique customer ID
+    const lastCustomer = await prisma.customer.findFirst({
+      orderBy: { id: 'desc' },
+      select: { id: true }
+    })
+    
+    let nextNumber = 1
+    if (lastCustomer) {
+      const lastNumber = parseInt(lastCustomer.id.replace('CUST', ''))
+      nextNumber = lastNumber + 1
+    }
+    
+    const customerId = `CUST${String(nextNumber).padStart(3, '0')}`
+    
+    // Convert date fields and add generated ID
+    const cleanData = {
+      ...data,
+      id: customerId,
+      contractExpiry: data.contractExpiry ? new Date(data.contractExpiry) : null,
+    }
+    
     const customer = await prisma.customer.create({
-      data,
+      data: cleanData,
       include: {
         assets: true,
         leases: true,
@@ -27,6 +49,10 @@ export async function POST(request: NextRequest) {
     })
     return NextResponse.json(customer, { status: 201 })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create customer' }, { status: 500 })
+    console.error('Create customer error:', error)
+    return NextResponse.json({ 
+      error: 'Failed to create customer', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 })
   }
 }

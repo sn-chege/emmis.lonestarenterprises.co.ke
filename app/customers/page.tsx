@@ -165,15 +165,19 @@ export default function CustomersPage() {
   return (
     <ProtectedLayout>
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Customer Management</h1>
             <p className="text-slate-600 mt-1">Manage your customers and their equipment</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button variant="outline" onClick={exportToExcel}>
               <Download className="w-4 h-4 mr-2" />
               Export
+            </Button>
+            <Button variant="outline" onClick={() => notifySuccess("Import Started", "Import customers functionality coming soon...")}>
+              <Download className="w-4 h-4 mr-2 rotate-180" />
+              Import
             </Button>
             <Button onClick={handleAddCustomer}>
               <Plus className="w-4 h-4 mr-2" />

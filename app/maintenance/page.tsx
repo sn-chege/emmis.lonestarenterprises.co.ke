@@ -210,12 +210,12 @@ export default function MaintenancePage() {
   return (
     <ProtectedLayout>
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Maintenance Management</h1>
             <p className="text-muted-foreground mt-2">Schedule, track and manage equipment maintenance activities</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-3">
             <Button variant="outline" onClick={() => setTemplatesModalOpen(true)}>
               <FileText className="mr-2 h-4 w-4" />
               Templates

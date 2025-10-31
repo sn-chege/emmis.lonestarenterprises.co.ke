@@ -222,7 +222,7 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
               {quickActions.map((action) => {
                 const Icon = action.icon
                 return (
