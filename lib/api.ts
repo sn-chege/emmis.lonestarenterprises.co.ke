@@ -61,8 +61,9 @@ class ApiClient {
   }
 
   // Users
-  async getUsers() {
-    return this.request('/users')
+  async getUsers(showDeleted = false) {
+    const url = showDeleted ? '/users?showDeleted=true' : '/users'
+    return this.request(url)
   }
 
   async getUser(id: string) {
@@ -90,8 +91,9 @@ class ApiClient {
   }
 
   // Customers
-  async getCustomers() {
-    return this.request('/customers')
+  async getCustomers(showDeleted = false) {
+    const url = showDeleted ? '/customers?showDeleted=true' : '/customers'
+    return this.request(url)
   }
 
   async getCustomer(id: string) {
@@ -275,7 +277,8 @@ export async function getDashboardStats() {
       activeWorkOrders: workOrders.filter((wo: any) => wo.status === 'open' || wo.status === 'inProgress').length,
       overdueWorkOrders: workOrders.filter((wo: any) => new Date(wo.dueDate) < new Date() && wo.status !== 'completed').length,
       activeMaintenance: maintenance.filter((m: any) => m.status === 'scheduled' || m.status === 'inProgress').length,
-      activeLeases: leases.filter((l: any) => l.status === 'active').length
+      activeLeases: leases.filter((l: any) => l.status === 'active').length,
+      totalRevenue: 0
     }
   } catch (error) {
     console.error('Failed to fetch dashboard stats:', error)
@@ -289,7 +292,8 @@ export async function getDashboardStats() {
       activeWorkOrders: 0,
       overdueWorkOrders: 0,
       activeMaintenance: 0,
-      activeLeases: 0
+      activeLeases: 0,
+      totalRevenue: 0
     }
   }
 }

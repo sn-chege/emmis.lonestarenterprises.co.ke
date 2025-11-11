@@ -1,0 +1,7 @@
+-- Reports data for January 2025
+INSERT INTO `reports` (`id`, `name`, `type`, `generated_date`, `format`, `file_size`, `file_path`, `status`, `generated_by`, `parameters`, `created_date`) VALUES
+('RPT2025001', 'Monthly Work Orders Report - January 2025', 'work_orders', '2025-01-31 23:59:00.000', 'PDF', '2.5MB', '/reports/2025/01/work_orders_jan_2025.pdf', 'completed', 'USR001', '{"month":"2025-01","status":"all"}', '2025-01-31 23:59:00.000'),
+('RPT2025002', 'Customer Equipment Summary', 'assets', '2025-01-30 16:30:00.000', 'Excel', '1.8MB', '/reports/2025/01/customer_equipment_summary.xlsx', 'completed', 'USR002', '{"date_range":"2025-01-01_to_2025-01-30"}', '2025-01-30 16:30:00.000'),
+('RPT2025003', 'Maintenance Schedule Report', 'maintenance', '2025-01-29 14:15:00.000', 'PDF', '1.2MB', '/reports/2025/01/maintenance_schedule_jan.pdf', 'completed', 'USR003', '{"month":"2025-01","type":"scheduled"}', '2025-01-29 14:15:00.000'),
+('RPT2025004', 'Lease Payment Status Report', 'leases', '2025-01-28 10:45:00.000', 'CSV', '0.8MB', '/reports/2025/01/lease_payments_status.csv', 'completed', 'USR001', '{"status":"all","month":"2025-01"}', '2025-01-28 10:45:00.000'),
+('RPT2025005', 'Technician Performance Report', 'performance', '2025-01-27 09:20:00.000', 'PDF', '3.1MB', '/reports/2025/01/technician_performance.pdf', 'completed', 'USR002', '{"period":"2025-01","include_charts":"true"}', '2025-01-27 09:20:00.000');

@@ -51,7 +51,13 @@ export function AssetModal({ open, onOpenChange, mode, asset, onSave, onDelete }
 
   useEffect(() => {
     if (asset && (mode === "edit" || mode === "view")) {
-      setFormData(asset)
+      const formattedAsset = {
+        ...asset,
+        purchaseDate: asset.purchaseDate ? new Date(asset.purchaseDate).toISOString().split('T')[0] : "",
+        warrantyStart: asset.warrantyStart ? new Date(asset.warrantyStart).toISOString().split('T')[0] : "",
+        warrantyEnd: asset.warrantyEnd ? new Date(asset.warrantyEnd).toISOString().split('T')[0] : ""
+      }
+      setFormData(formattedAsset)
     } else {
       setFormData({})
     }
@@ -73,6 +79,33 @@ export function AssetModal({ open, onOpenChange, mode, asset, onSave, onDelete }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate required fields
+    if (!formData.make?.trim()) {
+      notifyError("Validation Error", "Make is required")
+      return
+    }
+    if (!formData.model?.trim()) {
+      notifyError("Validation Error", "Model is required")
+      return
+    }
+    if (!formData.serialNumber?.trim()) {
+      notifyError("Validation Error", "Serial Number is required")
+      return
+    }
+    if (!formData.customerId) {
+      notifyError("Validation Error", "Customer is required")
+      return
+    }
+    if (!formData.location?.trim()) {
+      notifyError("Validation Error", "Location is required")
+      return
+    }
+    if (!formData.condition) {
+      notifyError("Validation Error", "Condition is required")
+      return
+    }
+    
     setIsSubmitting(true)
     
     try {

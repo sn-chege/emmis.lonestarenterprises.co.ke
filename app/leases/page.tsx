@@ -23,9 +23,13 @@ import {
   FileCheck,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { LeaseModal } from "@/components/leases/lease-modal"
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { api } from "@/lib/api"
-import { useToast } from "@/hooks/use-toast"
+import { useNotifications } from "@/components/notification-provider"
+import Link from "next/link"
+import { DataTable } from "@/components/ui/data-table"
 
 type LeaseStatus = "active" | "pending" | "expired" | "terminated"
 type PaymentStatus = "current" | "overdue" | "pending"
@@ -47,12 +51,18 @@ interface Lease {
 }
 
 export default function LeasesPage() {
-  const { toast } = useToast()
+  const { notifySuccess, notifyError, notifyDelete } = useNotifications()
   const [leases, setLeases] = useState<Lease[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [paymentFilter, setPaymentFilter] = useState<string>("all")
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add")
+  const [selectedLease, setSelectedLease] = useState<Lease | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [leaseToDelete, setLeaseToDelete] = useState<Lease | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const filteredLeases = leases.filter((lease) => {
     const matchesSearch =
@@ -86,8 +96,70 @@ export default function LeasesPage() {
   }
 
   const activeLeases = leases.filter((l) => l.status === "active").length
-  const totalRevenue = leases.reduce((sum, l) => sum + l.totalPaid, 0)
+  const totalRevenue = 0 // leases.reduce((sum, l) => sum + l.totalPaid, 0)
   const overduePayments = leases.filter((l) => l.paymentStatus === "overdue").length
+
+  const handleAddLease = () => {
+    setModalMode("add")
+    setSelectedLease(null)
+    setModalOpen(true)
+  }
+
+  const handleViewLease = (lease: Lease) => {
+    setModalMode("view")
+    setSelectedLease(lease)
+    setModalOpen(true)
+  }
+
+  const handleEditLease = (lease: Lease) => {
+    setModalMode("edit")
+    setSelectedLease(lease)
+    setModalOpen(true)
+  }
+
+  const handleDeleteLease = (lease: Lease) => {
+    setLeaseToDelete(lease)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDeleteLease = async () => {
+    if (!leaseToDelete) return
+    
+    setIsDeleting(true)
+    try {
+      await api.deleteLease(leaseToDelete.id)
+      setLeases(prevLeases => prevLeases.filter((l) => l.id !== leaseToDelete.id))
+      notifyDelete("Lease Deleted", `Lease ${leaseToDelete.id} has been deleted successfully.`)
+      setDeleteDialogOpen(false)
+      setLeaseToDelete(null)
+    } catch (error) {
+      console.error('Delete lease error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete lease'
+      notifyError("Delete Failed", errorMessage)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleSaveLease = async (leaseData: Partial<Lease>) => {
+    try {
+      if (modalMode === "add") {
+        const newLease = await api.createLease(leaseData)
+        setLeases(prevLeases => [...prevLeases, newLease])
+        notifySuccess("Lease Added", "Lease has been added successfully.")
+      } else if (modalMode === "edit" && selectedLease) {
+        const updatedLease = await api.updateLease(selectedLease.id, leaseData)
+        setLeases(prevLeases => prevLeases.map((l) => (l.id === selectedLease.id ? updatedLease : l)))
+        notifySuccess("Lease Updated", "Lease has been updated successfully.")
+      }
+      setModalOpen(false)
+    } catch (error) {
+      console.error('Save lease error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save lease'
+      notifyError("Save Failed", errorMessage)
+      throw error
+    }
+  }
 
   useEffect(() => {
     const fetchLeases = async () => {
@@ -95,11 +167,7 @@ export default function LeasesPage() {
         const data = await api.getLeases()
         setLeases(data)
       } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to load leases",
-          variant: "destructive",
-        })
+        notifyError("Error", "Failed to load leases")
       } finally {
         setLoading(false)
       }
@@ -120,23 +188,30 @@ export default function LeasesPage() {
   return (
     <ProtectedLayout>
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold">Lease Management</h1>
             <p className="text-muted-foreground">Equipment lease agreements, contracts, and SLA management</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <FileText className="mr-2 h-4 w-4" />
-              Contract Templates
-            </Button>
-            <Button variant="outline">
-              <ShieldCheck className="mr-2 h-4 w-4" />
-              SLA Management
-            </Button>
-            <Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link href="/leases/contract-templates">
+              <Button variant="outline" className="w-full sm:w-auto">
+                <FileText className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Contract Templates</span>
+                <span className="sm:hidden">Templates</span>
+              </Button>
+            </Link>
+            <Link href="/leases/sla-management">
+              <Button variant="outline" className="w-full sm:w-auto">
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">SLA Management</span>
+                <span className="sm:hidden">SLA</span>
+              </Button>
+            </Link>
+            <Button className="w-full sm:w-auto" onClick={handleAddLease}>
               <FilePlus className="mr-2 h-4 w-4" />
-              Create Lease Agreement
+              <span className="hidden sm:inline">Create Lease Agreement</span>
+              <span className="sm:hidden">Add Lease</span>
             </Button>
           </div>
         </div>
@@ -157,7 +232,7 @@ export default function LeasesPage() {
               <DollarSign className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+              <div className="text-2xl font-bold">_ _ _</div>
             </CardContent>
           </Card>
           <Card>
@@ -221,97 +296,122 @@ export default function LeasesPage() {
               </Select>
             </div>
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Lease ID</TableHead>
-                    <TableHead>Equipment</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Lease Period</TableHead>
-                    <TableHead>Payment Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Payment Status</TableHead>
-                    <TableHead>Next Payment</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredLeases.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground">
-                        No lease agreements found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredLeases.map((lease) => (
-                      <TableRow key={lease.id}>
-                        <TableCell className="font-medium">{lease.id}</TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{lease.equipmentName}</div>
-                            <div className="text-sm text-muted-foreground">{lease.serialNo}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{lease.customerName}</TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div>{formatDate(lease.startDate)}</div>
-                            <div className="text-muted-foreground">to {formatDate(lease.endDate)}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{formatCurrency(lease.paymentAmount)}</div>
-                            <div className="text-sm text-muted-foreground">{lease.paymentFrequency}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{getStatusBadge(lease.status)}</TableCell>
-                        <TableCell>{getPaymentStatusBadge(lease.paymentStatus)}</TableCell>
-                        <TableCell>{formatDate(lease.nextPaymentDate)}</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit Lease
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <DollarSign className="mr-2 h-4 w-4" />
-                                Record Payment
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <FileText className="mr-2 h-4 w-4" />
-                                View Documents
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                Renew Lease
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Terminate Lease
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable 
+              columns={[
+                { accessorKey: "id", header: "Lease ID" },
+                { 
+                  accessorKey: "equipmentName", 
+                  header: "Equipment",
+                  cell: ({ row }) => (
+                    <div>
+                      <div className="font-medium">{row.getValue("equipmentName")}</div>
+                      <div className="text-sm text-muted-foreground">{row.original.serialNo}</div>
+                    </div>
+                  )
+                },
+                { accessorKey: "customerName", header: "Customer" },
+                { 
+                  accessorKey: "startDate", 
+                  header: "Lease Period",
+                  cell: ({ row }) => (
+                    <div className="text-sm">
+                      <div>{formatDate(row.getValue("startDate"))}</div>
+                      <div className="text-muted-foreground">to {formatDate(row.original.endDate)}</div>
+                    </div>
+                  )
+                },
+                { 
+                  accessorKey: "paymentAmount", 
+                  header: "Payment Amount",
+                  cell: ({ row }) => (
+                    <div>
+                      <div className="font-medium">{formatCurrency(row.getValue("paymentAmount"))}</div>
+                      <div className="text-sm text-muted-foreground">{row.original.paymentFrequency}</div>
+                    </div>
+                  )
+                },
+                { 
+                  accessorKey: "status", 
+                  header: "Status",
+                  cell: ({ row }) => getStatusBadge(row.getValue("status"))
+                },
+                { 
+                  accessorKey: "paymentStatus", 
+                  header: "Payment Status",
+                  cell: ({ row }) => getPaymentStatusBadge(row.getValue("paymentStatus"))
+                },
+                { 
+                  accessorKey: "nextPaymentDate", 
+                  header: "Next Payment",
+                  cell: ({ row }) => formatDate(row.getValue("nextPaymentDate"))
+                },
+                {
+                  id: "actions",
+                  header: "Actions",
+                  cell: ({ row }) => {
+                    const lease = row.original
+                    return (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewLease(lease)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditLease(lease)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit Lease
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <DollarSign className="mr-2 h-4 w-4" />
+                            Record Payment
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <FileText className="mr-2 h-4 w-4" />
+                            View Documents
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Renew Lease
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeleteLease(lease)} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Terminate Lease
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )
+                  }
+                }
+              ]}
+              data={filteredLeases}
+              searchKey="equipmentName"
+              searchPlaceholder="Search lease agreements..."
+              title="Leases"
+            />
           </CardContent>
         </Card>
+
+        <LeaseModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          mode={modalMode}
+          lease={selectedLease}
+          onSave={handleSaveLease}
+        />
+
+        <DeleteConfirmationDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete Lease"
+          description={`Are you sure you want to delete lease ${leaseToDelete?.id}? This action cannot be undone and will permanently remove the lease agreement and all related payment records.`}
+          onConfirm={confirmDeleteLease}
+          isLoading={isDeleting}
+        />
       </div>
     </ProtectedLayout>
   )

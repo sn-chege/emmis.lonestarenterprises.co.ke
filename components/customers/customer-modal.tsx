@@ -57,6 +57,29 @@ export function CustomerModal({ open, onOpenChange, mode, customer, onSave, onDe
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate required fields
+    if (!formData.companyName?.trim()) {
+      notifyError("Validation Error", "Company Name is required")
+      return
+    }
+    if (!formData.contactPerson?.trim()) {
+      notifyError("Validation Error", "Contact Person is required")
+      return
+    }
+    if (!formData.email?.trim()) {
+      notifyError("Validation Error", "Email Address is required")
+      return
+    }
+    if (!formData.phone?.trim()) {
+      notifyError("Validation Error", "Phone Number is required")
+      return
+    }
+    if (!formData.address?.trim()) {
+      notifyError("Validation Error", "Address is required")
+      return
+    }
+    
     setIsSubmitting(true)
     
     try {

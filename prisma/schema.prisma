@@ -29,6 +29,7 @@ model User {
   supervisorId   String? @map("supervisor_id") @db.VarChar(50)
   supervisorName String? @map("supervisor_name") @db.VarChar(255)
   hireDate       DateTime? @map("hire_date") @db.Date
+  deletedAt      DateTime? @map("deleted_at")
 
   activityLogs ActivityLog[]
   supervisedTechnicians User[] @relation("SupervisorTechnician")
@@ -63,6 +64,7 @@ model Customer {
   supervisor       String?         @db.VarChar(255)
   createdDate      DateTime        @default(now()) @map("created_date")
   updatedDate      DateTime        @default(now()) @updatedAt @map("updated_date")
+  deletedAt        DateTime?       @map("deleted_at")
 
   assets Asset[]
   leases Lease[]
@@ -102,6 +104,7 @@ model Asset {
   notes             String?           @db.Text
   createdDate       DateTime          @default(now()) @map("created_date")
   updatedDate       DateTime          @default(now()) @updatedAt @map("updated_date")
+  deletedAt         DateTime?         @map("deleted_at")
 
   customer           Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
   repairHistory      RepairHistory[]
@@ -158,6 +161,7 @@ model WorkOrder {
   actualCost       Decimal?          @map("actual_cost") @db.Decimal(10, 2)
   cancelReason     String?           @map("cancel_reason") @db.Text
   updatedDate      DateTime          @default(now()) @updatedAt @map("updated_date")
+  deletedAt        DateTime?         @map("deleted_at")
 
   consumableParts ConsumablePart[]
 
@@ -206,6 +210,7 @@ model MaintenanceSchedule {
   workCarriedOut    String?             @map("work_carried_out") @db.Text
   notes             String?             @db.Text
   updatedDate       DateTime            @default(now()) @updatedAt @map("updated_date")
+  deletedAt         DateTime?           @map("deleted_at")
 
   equipment        Asset             @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
   maintenanceParts MaintenancePart[]
@@ -265,6 +270,7 @@ model Lease {
   notes             String?           @db.Text
   createdDate       DateTime          @default(now()) @map("created_date")
   updatedDate       DateTime          @default(now()) @updatedAt @map("updated_date")
+  deletedAt         DateTime?         @map("deleted_at")
 
   customer      Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
   leasePayments LeasePayment[]
@@ -478,6 +484,55 @@ enum ReportStatus {
 }
 
 
+
+model ContractTemplate {
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  type        String   @default("CUSTOM") @db.VarChar(50)
+  size        String?  @db.VarChar(50)
+  version     String   @default("1.0") @db.VarChar(20)
+  author      String   @default("System") @db.VarChar(255)
+  tags        String?  @db.Text
+  elements    String?  @db.LongText
+  folderPath  String?  @map("folder_path") @db.VarChar(500)
+  status      String   @default("active") @db.VarChar(50)
+  createdDate DateTime @default(now()) @map("created_date")
+  lastModified DateTime @default(now()) @updatedAt @map("last_modified")
+  deletedAt   DateTime? @map("deleted_at")
+
+  @@index([name])
+  @@index([type])
+  @@index([status])
+  @@map("contract_templates")
+}
+
+model SlaTemplate {
+  id             String   @id @db.VarChar(50)
+  name           String   @db.VarChar(255)
+  description    String?  @db.Text
+  customerId     String?  @map("customer_id") @db.VarChar(50)
+  customerName   String?  @map("customer_name") @db.VarChar(255)
+  serviceLevel   String   @map("service_level") @db.VarChar(50)
+  responseTime   String   @map("response_time") @db.VarChar(100)
+  resolutionTime String   @map("resolution_time") @db.VarChar(100)
+  availability   String   @db.VarChar(100)
+  penalties      String?  @db.Text
+  startDate      DateTime? @map("start_date") @db.Date
+  endDate        DateTime? @map("end_date") @db.Date
+  status         String   @default("pending") @db.VarChar(50)
+  terms          String?  @db.LongText
+  folderPath     String?  @map("folder_path") @db.VarChar(500)
+  createdDate    DateTime @default(now()) @map("created_date")
+  lastModified   DateTime @default(now()) @updatedAt @map("last_modified")
+  deletedAt      DateTime? @map("deleted_at")
+
+  @@index([name])
+  @@index([serviceLevel])
+  @@index([status])
+  @@index([customerId])
+  @@map("sla_templates")
+}
 
 enum ActivityAction {
   login

@@ -49,10 +49,16 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [customers, setCustomers] = useState<any[]>([])
   const [assets, setAssets] = useState<any[]>([])
+  const [technicians, setTechnicians] = useState<any[]>([])
+  const [supervisors, setSupervisors] = useState<any[]>([])
 
   useEffect(() => {
     if (workOrder && (mode === "edit" || mode === "view")) {
-      setFormData(workOrder)
+      const formattedWorkOrder = {
+        ...workOrder,
+        dueDate: workOrder.dueDate ? new Date(workOrder.dueDate).toISOString().split('T')[0] : ""
+      }
+      setFormData(formattedWorkOrder)
     } else {
       setFormData({ type: "service", serviceType: "scheduled", priority: "medium" })
     }
@@ -61,12 +67,15 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [customersData, assetsData] = await Promise.all([
+        const [customersData, assetsData, usersData] = await Promise.all([
           api.getCustomers(),
-          api.getAssets()
+          api.getAssets(),
+          api.getUsers()
         ])
         setCustomers(customersData)
         setAssets(assetsData)
+        setTechnicians(usersData.filter((user: any) => user.role === 'technician'))
+        setSupervisors(usersData.filter((user: any) => user.role === 'supervisor'))
       } catch (error) {
         console.error('Failed to fetch data:', error)
       }
@@ -78,6 +87,25 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate required fields
+    if (!formData.customerName) {
+      notifyError("Validation Error", "Customer is required")
+      return
+    }
+    if (!formData.equipmentName) {
+      notifyError("Validation Error", "Equipment is required")
+      return
+    }
+    if (!formData.type) {
+      notifyError("Validation Error", "Maintenance Type is required")
+      return
+    }
+    if (!formData.description?.trim()) {
+      notifyError("Validation Error", "Work Description is required")
+      return
+    }
+    
     setIsSubmitting(true)
     
     try {
@@ -386,21 +414,55 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="technicianName">Assigned Technician</Label>
-                  <Input
-                    id="technicianName"
+                  <Select
                     value={formData.technicianName || ""}
-                    onChange={(e) => setFormData({ ...formData, technicianName: e.target.value })}
-                    placeholder="Technician name"
-                  />
+                    onValueChange={(value) => {
+                      if (value === "unassigned") {
+                        setFormData({ ...formData, technicianName: "" })
+                      } else {
+                        const technician = technicians.find(t => t.name === value)
+                        setFormData({ ...formData, technicianName: technician ? technician.name : "" })
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select technician" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {technicians.map((technician) => (
+                        <SelectItem key={technician.id} value={technician.name}>
+                          {technician.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="supervisorName">Supervisor</Label>
-                  <Input
-                    id="supervisorName"
+                  <Select
                     value={formData.supervisorName || ""}
-                    onChange={(e) => setFormData({ ...formData, supervisorName: e.target.value })}
-                    placeholder="Supervisor name"
-                  />
+                    onValueChange={(value) => {
+                      if (value === "none") {
+                        setFormData({ ...formData, supervisorName: "" })
+                      } else {
+                        const supervisor = supervisors.find(s => s.name === value)
+                        setFormData({ ...formData, supervisorName: supervisor ? supervisor.name : "" })
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select supervisor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No supervisor</SelectItem>
+                      {supervisors.map((supervisor) => (
+                        <SelectItem key={supervisor.id} value={supervisor.name}>
+                          {supervisor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

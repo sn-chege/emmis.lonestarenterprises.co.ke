@@ -2,7 +2,8 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { ProtectedLayout } from "@/components/protected-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,15 +16,20 @@ import {
   Eye,
   Share2,
   Trash2,
-  Plus,
   FileBarChart,
   Wrench,
   Users,
   DollarSign,
   Package,
+  Calendar,
+  Clock,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { formatDate } from "@/lib/utils/format"
+import { useNotifications } from "@/components/notification-provider"
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog"
+import Link from "next/link"
+import { DataTable } from "@/components/ui/data-table"
 
 interface ReportType {
   id: string
@@ -128,7 +134,112 @@ const MOCK_REPORTS: GeneratedReport[] = [
 ]
 
 export default function ReportsPage() {
-  const [reports] = useState<GeneratedReport[]>(MOCK_REPORTS)
+  const router = useRouter()
+  const { notifySuccess, notifyError, notifyDelete } = useNotifications()
+  const [reports, setReports] = useState<GeneratedReport[]>([])
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalReports: 0,
+    totalAssets: 0,
+    activeWorkOrders: 0,
+    monthlyRevenue: 0
+  })
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [reportToDelete, setReportToDelete] = useState<GeneratedReport | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  useEffect(() => {
+    fetchReports()
+    fetchStats()
+  }, [])
+
+  const fetchReports = async () => {
+    try {
+      const response = await fetch('/api/reports')
+      if (response.ok) {
+        const data = await response.json()
+        setReports(data)
+      } else {
+        setReports(MOCK_REPORTS)
+      }
+    } catch (error) {
+      console.error('Failed to fetch reports:', error)
+      setReports(MOCK_REPORTS)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchStats = async () => {
+    try {
+      const [assetsRes, workOrdersRes, leasesRes] = await Promise.all([
+        fetch('/api/assets'),
+        fetch('/api/work-orders'),
+        fetch('/api/leases')
+      ])
+      
+      const assets = assetsRes.ok ? await assetsRes.json() : []
+      const workOrders = workOrdersRes.ok ? await workOrdersRes.json() : []
+      const leases = leasesRes.ok ? await leasesRes.json() : []
+      
+      const activeWorkOrders = workOrders.filter((wo: any) => wo.status === 'open' || wo.status === 'inProgress').length
+      const monthlyRevenue = leases.reduce((sum: number, lease: any) => sum + parseFloat(lease.paymentAmount || 0), 0)
+      
+      setStats({
+        totalReports: reports.length,
+        totalAssets: assets.length,
+        activeWorkOrders,
+        monthlyRevenue
+      })
+    } catch (error) {
+      console.error('Failed to fetch stats:', error)
+    }
+  }
+
+  const handleDeleteReport = async () => {
+    if (!reportToDelete) return
+    
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/reports/${reportToDelete.id}`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) throw new Error('Failed to delete report')
+      
+      setReports(prev => prev.filter(r => r.id !== reportToDelete.id))
+      notifyDelete("Report Deleted", `Report "${reportToDelete.name}" has been deleted successfully.`)
+    } catch (error) {
+      console.error('Delete report error:', error)
+      notifyError("Delete Failed", error instanceof Error ? error.message : 'Failed to delete report')
+    } finally {
+      setIsDeleting(false)
+      setDeleteDialogOpen(false)
+      setReportToDelete(null)
+    }
+  }
+
+  const generateReport = async (reportType: string) => {
+    try {
+      const response = await fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: reportType })
+      })
+      
+      if (!response.ok) throw new Error('Failed to generate report')
+      
+      const newReport = await response.json()
+      setReports(prev => [newReport, ...prev])
+      notifySuccess("Report Generated", `${reportType} report has been generated successfully.`)
+      
+      // Navigate to the report view page
+      router.push(`/reports/view/${newReport.id}`)
+    } catch (error) {
+      console.error('Generate report error:', error)
+      notifyError("Generation Failed", error instanceof Error ? error.message : 'Failed to generate report')
+    }
+  }
 
   const getStatusBadge = (status: GeneratedReport["status"]) => {
     const variants: Record<GeneratedReport["status"], "default" | "secondary" | "destructive"> = {
@@ -147,10 +258,6 @@ export default function ReportsPage() {
             <h1 className="text-3xl font-bold">Reports & Analytics</h1>
             <p className="text-muted-foreground">Generate comprehensive reports and analyze system data</p>
           </div>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Custom Report Builder
-          </Button>
         </div>
 
         <div className="grid gap-4 md:grid-cols-4">
@@ -160,28 +267,28 @@ export default function ReportsPage() {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{reports.length}</div>
-              <p className="text-xs text-muted-foreground">Generated this month</p>
+              <div className="text-2xl font-bold">{stats.totalReports}</div>
+              <p className="text-xs text-muted-foreground">Generated reports</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Equipment Uptime</CardTitle>
-              <BarChart3 className="h-4 w-4 text-green-600" />
+              <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
+              <Package className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">98.5%</div>
-              <p className="text-xs text-muted-foreground">+2.1% from last month</p>
+              <div className="text-2xl font-bold">{stats.totalAssets}</div>
+              <p className="text-xs text-muted-foreground">Equipment tracked</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
-              <TrendingUp className="h-4 w-4 text-blue-600" />
+              <CardTitle className="text-sm font-medium">Active Work Orders</CardTitle>
+              <Wrench className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">2.4 hrs</div>
-              <p className="text-xs text-muted-foreground">-0.5 hrs improvement</p>
+              <div className="text-2xl font-bold">{stats.activeWorkOrders}</div>
+              <p className="text-xs text-muted-foreground">Pending completion</p>
             </CardContent>
           </Card>
           <Card>
@@ -190,8 +297,8 @@ export default function ReportsPage() {
               <DollarSign className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">KES 485K</div>
-              <p className="text-xs text-muted-foreground">+12% from last month</p>
+              <div className="text-2xl font-bold">KES {stats.monthlyRevenue.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">From active leases</p>
             </CardContent>
           </Card>
         </div>
@@ -221,7 +328,10 @@ export default function ReportsPage() {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full">
+                  <Button 
+                    className="w-full"
+                    onClick={() => generateReport(reportType.name)}
+                  >
                     <FileText className="mr-2 h-4 w-4" />
                     Generate Report
                   </Button>
@@ -237,61 +347,79 @@ export default function ReportsPage() {
             <CardDescription>View and manage generated reports</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Report Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Generated Date</TableHead>
-                    <TableHead>Format</TableHead>
-                    <TableHead>Size</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reports.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
-                        No reports generated yet
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    reports.map((report) => (
-                      <TableRow key={report.id}>
-                        <TableCell className="font-medium">{report.name}</TableCell>
-                        <TableCell>{report.type}</TableCell>
-                        <TableCell>{formatDate(report.generatedDate)}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{report.format}</Badge>
-                        </TableCell>
-                        <TableCell>{report.size}</TableCell>
-                        <TableCell>{getStatusBadge(report.status)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" title="View Report">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" title="Download Report">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" title="Share Report">
-                              <Share2 className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" title="Delete Report">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable 
+              columns={[
+                { accessorKey: "name", header: "Report Name" },
+                { accessorKey: "type", header: "Type" },
+                { 
+                  accessorKey: "generatedDate", 
+                  header: "Generated Date",
+                  cell: ({ row }) => formatDate(row.getValue("generatedDate"))
+                },
+                { 
+                  accessorKey: "format", 
+                  header: "Format",
+                  cell: ({ row }) => <Badge variant="outline">{row.getValue("format")}</Badge>
+                },
+                { accessorKey: "size", header: "Size" },
+                { 
+                  accessorKey: "status", 
+                  header: "Status",
+                  cell: ({ row }) => getStatusBadge(row.getValue("status"))
+                },
+                {
+                  id: "actions",
+                  header: "Actions",
+                  cell: ({ row }) => {
+                    const report = row.original
+                    return (
+                      <div className="flex justify-end gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          title="View Report"
+                          onClick={() => router.push(`/reports/view/${report.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Download Report">
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Share Report">
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          title="Delete Report"
+                          onClick={() => {
+                            setReportToDelete(report)
+                            setDeleteDialogOpen(true)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    )
+                  }
+                }
+              ]}
+              data={reports}
+              searchKey="name"
+              searchPlaceholder="Search reports..."
+              title="Reports"
+            />
           </CardContent>
         </Card>
+
+        <DeleteConfirmationDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete Report"
+          description={`Are you sure you want to delete report "${reportToDelete?.name}"? This action cannot be undone.`}
+          onConfirm={handleDeleteReport}
+          isLoading={isDeleting}
+        />
       </div>
     </ProtectedLayout>
   )

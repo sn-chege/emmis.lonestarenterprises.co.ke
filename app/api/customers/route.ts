@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const showDeleted = searchParams.get('showDeleted') === 'true'
+    
     const customers = await prisma.customer.findMany({
+      where: {
+        deletedAt: showDeleted ? { not: null } : null
+      },
       include: {
         assets: true,
         leases: true,

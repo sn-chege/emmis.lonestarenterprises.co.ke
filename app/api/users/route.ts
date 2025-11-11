@@ -3,9 +3,15 @@ import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { logActivity } from '@/lib/activity-log'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const showDeleted = searchParams.get('showDeleted') === 'true'
+    
     const users = await prisma.user.findMany({
+      where: {
+        deletedAt: showDeleted ? { not: null } : null
+      },
       select: {
         id: true,
         email: true,
@@ -17,6 +23,7 @@ export async function GET() {
         status: true,
         lastLogin: true,
         createdDate: true,
+        deletedAt: true,
       },
     })
     return NextResponse.json(users)
@@ -33,12 +40,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Password is required' }, { status: 400 })
     }
     
+    // Generate auto ID
+    const lastUser = await prisma.user.findFirst({
+      orderBy: { id: 'desc' },
+      select: { id: true }
+    })
+    
+    const nextNumber = lastUser 
+      ? parseInt(lastUser.id.replace('USR', '')) + 1 
+      : 1
+    const id = `USR${nextNumber.toString().padStart(3, '0')}`
+    
     const hashedPassword = await bcrypt.hash(data.password, 10)
     const { password, ...userData } = data
     
     const user = await prisma.user.create({
       data: {
         ...userData,
+        id,
         passwordHash: hashedPassword,
       },
       select: {
@@ -50,6 +69,8 @@ export async function POST(request: NextRequest) {
         phone: true,
         department: true,
         status: true,
+        supervisorId: true,
+        supervisorName: true,
         createdDate: true,
       },
     })

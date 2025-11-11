@@ -29,19 +29,25 @@ export async function logActivity(data: ActivityLogData) {
 }
 
 export async function getRecentActivities(userId?: string, limit = 10) {
-  const where = userId ? { userId } : {}
-  
-  return await prisma.activityLog.findMany({
-    where,
-    orderBy: { createdDate: 'desc' },
-    take: limit,
-    include: {
-      user: {
-        select: {
-          name: true,
-          role: true
+  try {
+    const where = userId ? { userId } : {}
+    
+    return await prisma.activityLog.findMany({
+      where,
+      orderBy: { createdDate: 'desc' },
+      take: limit,
+      include: {
+        user: {
+          select: {
+            name: true,
+            role: true
+          }
         }
       }
-    }
-  })
+    })
+  } catch (error) {
+    console.error('Database error in getRecentActivities:', error)
+    // Return empty array as fallback
+    return []
+  }
 }

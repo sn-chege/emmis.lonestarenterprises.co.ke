@@ -65,33 +65,69 @@ export function MaintenanceModal({ open, onOpenChange, mode, maintenance, onSave
     }
   }, [open])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (mode === "complete") {
-      onSave({
-        ...formData,
-        status: "completed",
-        completedDate: formData.completedDate || new Date().toISOString().split("T")[0],
-      } as MaintenanceRecord)
-    } else if (mode === "reschedule") {
-      onSave({
-        ...formData,
-        scheduledDate: formData.scheduledDate!,
-      } as MaintenanceRecord)
-    } else {
-      const newId = mode === "add" ? `MT${String(Date.now()).slice(-3)}` : formData.id
-      const asset = assets.find((a) => a.id === formData.equipmentId)
+    try {
+      if (mode === "complete") {
+        // Validate completion fields
+        if (!formData.workCarriedOut?.trim()) {
+          console.error("Work Carried Out is required for completion")
+          return
+        }
+        await onSave({
+          ...formData,
+          status: "completed",
+          completedDate: formData.completedDate || new Date().toISOString().split("T")[0],
+        } as MaintenanceRecord)
+      } else if (mode === "reschedule") {
+        // Validate reschedule fields
+        if (!formData.scheduledDate) {
+          console.error("New Scheduled Date is required")
+          return
+        }
+        await onSave({
+          ...formData,
+          scheduledDate: formData.scheduledDate!,
+        } as MaintenanceRecord)
+      } else {
+        // Validate required fields for add/edit
+        if (!formData.equipmentId) {
+          console.error("Equipment is required")
+          return
+        }
+        if (!formData.type) {
+          console.error("Maintenance Type is required")
+          return
+        }
+        if (!formData.priority) {
+          console.error("Priority is required")
+          return
+        }
+        if (!formData.scheduledDate) {
+          console.error("Scheduled Date is required")
+          return
+        }
+        if (!formData.description?.trim()) {
+          console.error("Description is required")
+          return
+        }
+        
+        const newId = mode === "add" ? `MT${String(Date.now()).slice(-3)}` : formData.id
+        const asset = assets.find((a) => a.id === formData.equipmentId)
 
-      onSave({
-        ...formData,
-        id: newId!,
-        equipmentName: asset ? `${asset.make} ${asset.model}` : "",
-        serialNo: asset?.serialNumber || "",
-        customerId: asset?.customerId,
-        customerName: asset?.customerName,
-        createdDate: formData.createdDate || new Date().toISOString().split("T")[0],
-      } as MaintenanceRecord)
+        await onSave({
+          ...formData,
+          id: newId!,
+          equipmentName: asset ? `${asset.make} ${asset.model}` : "",
+          serialNo: asset?.serialNumber || "",
+          customerId: asset?.customerId,
+          customerName: asset?.customerName,
+          createdDate: formData.createdDate || new Date().toISOString().split("T")[0],
+        } as MaintenanceRecord)
+      }
+    } catch (error) {
+      console.error('Error submitting maintenance form:', error)
     }
   }
 

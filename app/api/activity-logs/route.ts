@@ -15,9 +15,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(activities)
   } catch (error) {
     console.error('Error fetching activity logs:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch activity logs' },
-      { status: 500 }
-    )
+    // Return empty array instead of error to prevent dashboard crash
+    return NextResponse.json([])
   }
 }

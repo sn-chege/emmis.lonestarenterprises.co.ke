@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import type { User, UserRole, UserStatus } from "@/lib/types"
 import { formatDate } from "@/lib/utils/format"
 import { useNotifications } from "@/components/notification-provider"
+import { api } from "@/lib/api"
 
 interface UserModalProps {
   open: boolean
@@ -40,6 +41,13 @@ export function UserModal({ open, onOpenChange, mode, user, onSave }: UserModalP
     password: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [supervisors, setSupervisors] = useState<User[]>([])
+  
+  const handleClose = () => {
+    if (!isSubmitting) {
+      onOpenChange(false)
+    }
+  }
 
   useEffect(() => {
     if (user && (mode === "edit" || mode === "view")) {
@@ -57,9 +65,45 @@ export function UserModal({ open, onOpenChange, mode, user, onSave }: UserModalP
     }
   }, [user, mode, open])
 
+  useEffect(() => {
+    const fetchSupervisors = async () => {
+      try {
+        const users = await api.getUsers()
+        setSupervisors(users.filter(u => u.role === 'supervisor'))
+      } catch (error) {
+        console.error('Failed to fetch supervisors:', error)
+      }
+    }
+    if (open) {
+      fetchSupervisors()
+    }
+  }, [open])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (mode !== "view") {
+      // Validate required fields
+      if (!formData.name?.trim()) {
+        notifyError("Validation Error", "Full Name is required")
+        return
+      }
+      if (!formData.email?.trim()) {
+        notifyError("Validation Error", "Email is required")
+        return
+      }
+      if (!formData.role) {
+        notifyError("Validation Error", "Role is required")
+        return
+      }
+      if (!formData.status) {
+        notifyError("Validation Error", "Status is required")
+        return
+      }
+      if (mode === "add" && !formData.password?.trim()) {
+        notifyError("Validation Error", "Password is required for new users")
+        return
+      }
+      
       setIsSubmitting(true)
       
       try {
@@ -75,7 +119,7 @@ export function UserModal({ open, onOpenChange, mode, user, onSave }: UserModalP
   const isViewMode = mode === "view"
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
@@ -232,6 +276,38 @@ export function UserModal({ open, onOpenChange, mode, user, onSave }: UserModalP
               </div>
             </div>
 
+            {formData.role === "technician" && (
+              <div className="space-y-2">
+                <Label htmlFor="supervisorId">Supervisor</Label>
+                {isViewMode ? (
+                  <div className="text-sm">{formData.supervisorName || "Not assigned"}</div>
+                ) : (
+                  <Select
+                    value={formData.supervisorId || ""}
+                    onValueChange={(value) => {
+                      const supervisor = supervisors.find(s => s.id === value)
+                      setFormData({ 
+                        ...formData, 
+                        supervisorId: value || undefined,
+                        supervisorName: supervisor?.name || undefined
+                      })
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select supervisor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {supervisors.map((supervisor) => (
+                        <SelectItem key={supervisor.id} value={supervisor.id}>
+                          {supervisor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
+
             {mode === "view" && user?.lastLogin && (
               <div className="space-y-2">
                 <Label>Last Login</Label>
@@ -241,7 +317,7 @@ export function UserModal({ open, onOpenChange, mode, user, onSave }: UserModalP
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               {isViewMode ? "Close" : "Cancel"}
             </Button>
             {!isViewMode && (

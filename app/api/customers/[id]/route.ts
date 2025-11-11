@@ -47,9 +47,21 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    await prisma.customer.delete({
+    
+    const customer = await prisma.customer.findUnique({
       where: { id },
+      select: { companyName: true }
     })
+    
+    if (!customer) {
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+    }
+    
+    await prisma.customer.update({
+      where: { id },
+      data: { deletedAt: new Date() }
+    })
+    
     return NextResponse.json({ message: 'Customer deleted successfully' })
   } catch (error) {
     console.error('Delete customer error:', error)

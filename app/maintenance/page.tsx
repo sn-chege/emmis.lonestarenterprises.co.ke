@@ -15,6 +15,7 @@ import { formatDate } from "@/lib/utils/format"
 import { Wrench, FileText, Search, Eye, Edit, Trash2, Play, CheckCircle, Calendar, FileBarChart } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { ProtectedLayout } from "@/components/protected-layout"
+import { DataTable } from "@/components/ui/data-table"
 
 export default function MaintenancePage() {
   const { toast } = useToast()
@@ -289,91 +290,100 @@ export default function MaintenancePage() {
             <CardTitle>Maintenance Records ({filteredMaintenance.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Equipment</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Scheduled Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Technician</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMaintenance.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
-                        No maintenance records found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredMaintenance.map((m) => (
-                      <TableRow key={m.id}>
-                        <TableCell className="font-medium">{m.id}</TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{m.equipmentName}</div>
-                            <div className="text-sm text-muted-foreground">{m.serialNo}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getTypeBadge(m.type)}>{m.type}</Badge>
-                        </TableCell>
-                        <TableCell>{formatDate(m.scheduledDate)}</TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusBadge(m.status)}>{m.status}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getPriorityBadge(m.priority)}>{m.priority}</Badge>
-                        </TableCell>
-                        <TableCell>{m.technicianName || "Unassigned"}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleView(m)}>
-                              <Eye className="h-4 w-4" />
+            <DataTable 
+              columns={[
+                { accessorKey: "id", header: "ID" },
+                { 
+                  accessorKey: "equipmentName", 
+                  header: "Equipment",
+                  cell: ({ row }) => (
+                    <div>
+                      <div className="font-medium">{row.getValue("equipmentName")}</div>
+                      <div className="text-sm text-muted-foreground">{row.original.serialNo}</div>
+                    </div>
+                  )
+                },
+                { 
+                  accessorKey: "type", 
+                  header: "Type",
+                  cell: ({ row }) => (
+                    <Badge variant={getTypeBadge(row.getValue("type"))}>{row.getValue("type")}</Badge>
+                  )
+                },
+                { 
+                  accessorKey: "scheduledDate", 
+                  header: "Scheduled Date",
+                  cell: ({ row }) => formatDate(row.getValue("scheduledDate"))
+                },
+                { 
+                  accessorKey: "status", 
+                  header: "Status",
+                  cell: ({ row }) => (
+                    <Badge variant={getStatusBadge(row.getValue("status"))}>{row.getValue("status")}</Badge>
+                  )
+                },
+                { 
+                  accessorKey: "priority", 
+                  header: "Priority",
+                  cell: ({ row }) => (
+                    <Badge variant={getPriorityBadge(row.getValue("priority"))}>{row.getValue("priority")}</Badge>
+                  )
+                },
+                { 
+                  accessorKey: "technicianName", 
+                  header: "Technician",
+                  cell: ({ row }) => row.getValue("technicianName") || "Unassigned"
+                },
+                {
+                  id: "actions",
+                  header: "Actions",
+                  cell: ({ row }) => {
+                    const m = row.original
+                    return (
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleView(m)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {m.status === "scheduled" && (
+                          <Button variant="ghost" size="icon" onClick={() => handleStart(m.id)}>
+                            <Play className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {(m.status === "scheduled" || m.status === "overdue") && (
+                          <>
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(m)}>
+                              <Edit className="h-4 w-4" />
                             </Button>
-                            {m.status === "scheduled" && (
-                              <Button variant="ghost" size="icon" onClick={() => handleStart(m.id)}>
-                                <Play className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {(m.status === "scheduled" || m.status === "overdue") && (
-                              <>
-                                <Button variant="ghost" size="icon" onClick={() => handleEdit(m)}>
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleReschedule(m)}>
-                                  <Calendar className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                            {m.status === "inProgress" && (
-                              <Button variant="ghost" size="icon" onClick={() => handleComplete(m)}>
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {m.status === "completed" && (
-                              <Button variant="ghost" size="icon" onClick={() => handleView(m)}>
-                                <FileBarChart className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {m.status !== "inProgress" && (
-                              <Button variant="ghost" size="icon" onClick={() => handleDelete(m.id)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                            <Button variant="ghost" size="icon" onClick={() => handleReschedule(m)}>
+                              <Calendar className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        {m.status === "inProgress" && (
+                          <Button variant="ghost" size="icon" onClick={() => handleComplete(m)}>
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {m.status === "completed" && (
+                          <Button variant="ghost" size="icon" onClick={() => handleView(m)}>
+                            <FileBarChart className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {m.status !== "inProgress" && (
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(m.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    )
+                  }
+                }
+              ]}
+              data={filteredMaintenance}
+              searchKey="equipmentName"
+              searchPlaceholder="Search maintenance..."
+              title="Maintenance"
+            />
           </CardContent>
         </Card>
 

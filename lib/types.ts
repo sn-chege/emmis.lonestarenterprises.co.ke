@@ -21,6 +21,7 @@ export interface User {
   supervisorId?: string
   supervisorName?: string
   hireDate?: string
+  deletedAt?: string
 }
 
 export type CustomerStatus = "Active" | "Inactive" | "Pending" | "Suspended"

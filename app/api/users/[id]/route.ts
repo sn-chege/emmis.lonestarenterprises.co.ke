@@ -95,9 +95,23 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
     
-    // Delete user first
-    await prisma.user.delete({
+    // Soft delete by setting deletedAt timestamp
+    await prisma.user.update({
       where: { id },
+      data: { deletedAt: new Date() }
+    })
+    
+    // Log activity
+    await logActivity({
+      userId: 'admin',
+      userName: 'System Admin',
+      action: 'delete',
+      module: 'Users',
+      entityType: 'User',
+      entityId: id,
+      entityName: user.name,
+      description: `Soft deleted user: ${user.name}`,
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown'
     })
     
     return NextResponse.json({ message: 'User deleted successfully' })

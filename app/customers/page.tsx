@@ -14,6 +14,9 @@ import type { Customer } from "@/lib/types"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { CustomerModal } from "@/components/customers/customer-modal"
 import { useNotifications } from "@/components/notification-provider"
+import { SoftDeleteToggle } from "@/components/soft-delete-toggle"
+import { DataTable } from "@/components/ui/data-table"
+import { useTableExport } from "@/hooks/use-table-export"
 
 export default function CustomersPage() {
   const { notifySuccess, notifyError, notifyDelete } = useNotifications()
@@ -26,6 +29,7 @@ export default function CustomersPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add")
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [showDeleted, setShowDeleted] = useState(false)
 
   const filteredCustomers = useMemo(() => {
     return customers.filter((customer) => {
@@ -43,6 +47,21 @@ export default function CustomersPage() {
       return matchesSearch && matchesStatus && matchesPayment && matchesContract
     })
   }, [customers, searchTerm, statusFilter, paymentFilter, contractFilter])
+
+  const customerColumns = [
+    { accessorKey: "id", header: "Customer ID" },
+    { accessorKey: "companyName", header: "Company Name" },
+    { accessorKey: "contactPerson", header: "Contact Person" },
+    { accessorKey: "email", header: "Email" },
+    { accessorKey: "phone", header: "Phone" },
+    { accessorKey: "industry", header: "Industry" },
+    { accessorKey: "status", header: "Status" },
+    { accessorKey: "contractStatus", header: "Contract Status" },
+    { accessorKey: "paymentStatus", header: "Payment Status" },
+    { accessorKey: "monthlyAmount", header: "Monthly Amount" },
+  ]
+
+  const { exportToExcel } = useTableExport(filteredCustomers, customerColumns, "Customers")
 
   const clearFilters = () => {
     setSearchTerm("")
@@ -100,7 +119,7 @@ export default function CustomersPage() {
     try {
       const customer = customers.find((c) => c.id === customerId)
       await api.deleteCustomer(customerId)
-      setCustomers(customers.filter((c) => c.id !== customerId))
+      await fetchCustomers() // Refresh the list
       notifyDelete("Customer Deleted", `${customer?.companyName} has been deleted successfully.`)
       setModalOpen(false)
     } catch (error) {
@@ -108,7 +127,8 @@ export default function CustomersPage() {
     }
   }
 
-  const exportToExcel = () => {
+  const handleExportToExcel = () => {
+    exportToExcel()
     notifySuccess("Export Started", "Exporting customer data to Excel...")
   }
 
@@ -138,19 +158,25 @@ export default function CustomersPage() {
     }
   }
 
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        const data = await api.getCustomers()
-        setCustomers(data)
-      } catch (error) {
-        notifyError("Error", "Failed to load customers")
-      } finally {
-        setLoading(false)
-      }
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true)
+      const data = await api.getCustomers(showDeleted)
+      setCustomers(data)
+    } catch (error) {
+      notifyError("Error", "Failed to load customers")
+    } finally {
+      setLoading(false)
     }
+  }
+
+  const handleToggleDeleted = (show: boolean) => {
+    setShowDeleted(show)
+  }
+
+  useEffect(() => {
     fetchCustomers()
-  }, [])
+  }, [showDeleted])
 
   if (loading) {
     return (
@@ -171,7 +197,12 @@ export default function CustomersPage() {
             <p className="text-slate-600 mt-1">Manage your customers and their equipment</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button variant="outline" onClick={exportToExcel}>
+            <SoftDeleteToggle 
+              showDeleted={showDeleted} 
+              onToggle={handleToggleDeleted}
+              deletedCount={showDeleted ? customers.length : undefined}
+            />
+            <Button variant="outline" onClick={handleExportToExcel}>
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
@@ -239,90 +270,96 @@ export default function CustomersPage() {
         </Card>
 
         <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer ID</TableHead>
-                    <TableHead>Company Details</TableHead>
-                    <TableHead>Contact Information</TableHead>
-                    <TableHead>Equipment</TableHead>
-                    <TableHead>Contract Status</TableHead>
-                    <TableHead>Payment Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCustomers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-slate-500">
-                        No customers found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredCustomers.map((customer) => (
-                      <TableRow key={customer.id}>
-                        <TableCell className="font-semibold">{customer.id}</TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-semibold text-slate-900">{customer.companyName}</div>
-                            <div className="text-sm text-slate-600">
-                              {customer.industry} • Est. {customer.established}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium text-slate-900">{customer.contactPerson}</div>
-                            <div className="text-sm text-slate-600">{customer.email}</div>
-                            <div className="text-sm text-slate-600">{customer.phone}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-semibold text-slate-900">{customer.totalEquipment} Equipment</div>
-                            <div className="text-sm text-slate-600">{customer.equipmentDetails}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <Badge variant={getContractBadgeVariant(customer.contractStatus)}>
-                              {customer.contractStatus}
-                            </Badge>
-                            <div className="text-xs text-slate-600">Expires {formatDate(customer.contractExpiry)}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <Badge variant={getPaymentBadgeVariant(customer.paymentStatus)}>
-                              {customer.paymentStatus}
-                            </Badge>
-                            <div className="text-xs text-slate-600">{formatCurrency(customer.monthlyAmount)}/month</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => handleViewCustomer(customer)}>
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleEditCustomer(customer)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Package className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <FileText className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+          <CardContent className="p-6">
+            <DataTable 
+              columns={[
+                { accessorKey: "id", header: "Customer ID" },
+                { 
+                  accessorKey: "companyName", 
+                  header: "Company Details",
+                  cell: ({ row }) => (
+                    <div>
+                      <div className="font-semibold text-slate-900">{row.getValue("companyName")}</div>
+                      <div className="text-sm text-slate-600">
+                        {row.original.industry} • Est. {row.original.established}
+                      </div>
+                    </div>
+                  )
+                },
+                { 
+                  accessorKey: "contactPerson", 
+                  header: "Contact Information",
+                  cell: ({ row }) => (
+                    <div>
+                      <div className="font-medium text-slate-900">{row.getValue("contactPerson")}</div>
+                      <div className="text-sm text-slate-600">{row.original.email}</div>
+                      <div className="text-sm text-slate-600">{row.original.phone}</div>
+                    </div>
+                  )
+                },
+                { 
+                  accessorKey: "totalEquipment", 
+                  header: "Equipment",
+                  cell: ({ row }) => (
+                    <div>
+                      <div className="font-semibold text-slate-900">{row.getValue("totalEquipment")} Equipment</div>
+                      <div className="text-sm text-slate-600">{row.original.equipmentDetails}</div>
+                    </div>
+                  )
+                },
+                { 
+                  accessorKey: "contractStatus", 
+                  header: "Contract Status",
+                  cell: ({ row }) => (
+                    <div className="space-y-1">
+                      <Badge variant={getContractBadgeVariant(row.getValue("contractStatus"))}>
+                        {row.getValue("contractStatus")}
+                      </Badge>
+                      <div className="text-xs text-slate-600">Expires {formatDate(row.original.contractExpiry)}</div>
+                    </div>
+                  )
+                },
+                { 
+                  accessorKey: "paymentStatus", 
+                  header: "Payment Status",
+                  cell: ({ row }) => (
+                    <div className="space-y-1">
+                      <Badge variant={getPaymentBadgeVariant(row.getValue("paymentStatus"))}>
+                        {row.getValue("paymentStatus")}
+                      </Badge>
+                      <div className="text-xs text-slate-600">{formatCurrency(row.original.monthlyAmount)}/month</div>
+                    </div>
+                  )
+                },
+                {
+                  id: "actions",
+                  header: "Actions",
+                  cell: ({ row }) => {
+                    const customer = row.original
+                    return (
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleViewCustomer(customer)}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleEditCustomer(customer)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <Package className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <FileText className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )
+                  }
+                }
+              ]}
+              data={filteredCustomers}
+              searchKey="companyName"
+              searchPlaceholder="Search customers..."
+              title="Customers"
+            />
           </CardContent>
         </Card>
       </div>

@@ -14,6 +14,8 @@ import type { WorkOrder } from "@/lib/types"
 import { formatDate } from "@/lib/utils/format"
 import { WorkOrderModal } from "@/components/work-orders/work-order-modal"
 import { useNotifications } from "@/components/notification-provider"
+import { DataTable } from "@/components/ui/data-table"
+import { useTableExport } from "@/hooks/use-table-export"
 
 export default function WorkOrdersPage() {
   const { notifySuccess, notifyError, notifyDelete } = useNotifications()
@@ -43,6 +45,19 @@ export default function WorkOrdersPage() {
       return matchesSearch && matchesType && matchesStatus && matchesPriority
     })
   }, [workOrders, searchTerm, typeFilter, statusFilter, priorityFilter])
+
+  const workOrderColumns = [
+    { accessorKey: "id", header: "Work Order #" },
+    { accessorKey: "customerName", header: "Customer" },
+    { accessorKey: "equipmentName", header: "Equipment" },
+    { accessorKey: "type", header: "Type" },
+    { accessorKey: "priority", header: "Priority" },
+    { accessorKey: "status", header: "Status" },
+    { accessorKey: "technicianName", header: "Technician" },
+    { accessorKey: "dueDate", header: "Due Date" },
+  ]
+
+  const { exportToExcel } = useTableExport(filteredWorkOrders, workOrderColumns, "Work Orders")
 
   const clearFilters = () => {
     setSearchTerm("")
@@ -106,7 +121,8 @@ export default function WorkOrdersPage() {
     }
   }
 
-  const exportToExcel = () => {
+  const handleExportToExcel = () => {
+    exportToExcel()
     notifySuccess("Export Started", "Exporting work order data to Excel...")
   }
 
@@ -175,7 +191,7 @@ export default function WorkOrdersPage() {
             <p className="text-slate-600 mt-1">Manage service and repair work orders</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button variant="outline" onClick={exportToExcel}>
+            <Button variant="outline" onClick={handleExportToExcel}>
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
@@ -239,102 +255,114 @@ export default function WorkOrdersPage() {
         </Card>
 
         <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Work Order #</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Equipment</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Technician</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredWorkOrders.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-slate-500">
-                        No work orders found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredWorkOrders.map((workOrder) => (
-                      <TableRow key={workOrder.id}>
-                        <TableCell className="font-semibold">{workOrder.id}</TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium text-slate-900">{workOrder.customerName}</div>
-                            <div className="text-sm text-slate-600">{workOrder.contactPerson}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium text-slate-900">{workOrder.equipmentName}</div>
-                            <div className="text-sm text-slate-600">SN: {workOrder.serialNo}</div>
-                            <div className="text-xs text-slate-500">{workOrder.location}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {workOrder.type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getPriorityBadgeVariant(workOrder.priority)} className="capitalize">
-                            {workOrder.priority}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusBadgeVariant(workOrder.status)} className="capitalize">
-                            {workOrder.status.replace("-", " ")}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            {workOrder.technicianName ? (
-                              <>
-                                <div className="font-medium text-slate-900">{workOrder.technicianName}</div>
-                                <div className="text-xs text-slate-500">{workOrder.supervisorName}</div>
-                              </>
-                            ) : (
-                              <span className="text-slate-500 text-sm">Unassigned</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm text-slate-900">{formatDate(workOrder.dueDate)}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => handleViewWorkOrder(workOrder)}>
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleEditWorkOrder(workOrder)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            {!workOrder.technicianName && (
-                              <Button variant="ghost" size="sm">
-                                <UserPlus className="w-4 h-4" />
-                              </Button>
-                            )}
-                            {workOrder.status !== "completed" && (
-                              <Button variant="ghost" size="sm">
-                                <CheckCircle className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+          <CardContent className="p-6">
+            <DataTable 
+              columns={[
+                { accessorKey: "id", header: "Work Order #" },
+                { 
+                  accessorKey: "customerName", 
+                  header: "Customer",
+                  cell: ({ row }) => (
+                    <div>
+                      <div className="font-medium text-slate-900">{row.getValue("customerName")}</div>
+                      <div className="text-sm text-slate-600">{row.original.contactPerson}</div>
+                    </div>
+                  )
+                },
+                { 
+                  accessorKey: "equipmentName", 
+                  header: "Equipment",
+                  cell: ({ row }) => (
+                    <div>
+                      <div className="font-medium text-slate-900">{row.getValue("equipmentName")}</div>
+                      <div className="text-sm text-slate-600">SN: {row.original.serialNo}</div>
+                      <div className="text-xs text-slate-500">{row.original.location}</div>
+                    </div>
+                  )
+                },
+                { 
+                  accessorKey: "type", 
+                  header: "Type",
+                  cell: ({ row }) => (
+                    <Badge variant="outline" className="capitalize">
+                      {row.getValue("type")}
+                    </Badge>
+                  )
+                },
+                { 
+                  accessorKey: "priority", 
+                  header: "Priority",
+                  cell: ({ row }) => (
+                    <Badge variant={getPriorityBadgeVariant(row.getValue("priority"))} className="capitalize">
+                      {row.getValue("priority")}
+                    </Badge>
+                  )
+                },
+                { 
+                  accessorKey: "status", 
+                  header: "Status",
+                  cell: ({ row }) => (
+                    <Badge variant={getStatusBadgeVariant(row.getValue("status"))} className="capitalize">
+                      {row.getValue("status").replace("-", " ")}
+                    </Badge>
+                  )
+                },
+                { 
+                  accessorKey: "technicianName", 
+                  header: "Technician",
+                  cell: ({ row }) => (
+                    <div>
+                      {row.getValue("technicianName") ? (
+                        <>
+                          <div className="font-medium text-slate-900">{row.getValue("technicianName")}</div>
+                          <div className="text-xs text-slate-500">{row.original.supervisorName}</div>
+                        </>
+                      ) : (
+                        <span className="text-slate-500 text-sm">Unassigned</span>
+                      )}
+                    </div>
+                  )
+                },
+                { 
+                  accessorKey: "dueDate", 
+                  header: "Due Date",
+                  cell: ({ row }) => (
+                    <div className="text-sm text-slate-900">{formatDate(row.getValue("dueDate"))}</div>
+                  )
+                },
+                {
+                  id: "actions",
+                  header: "Actions",
+                  cell: ({ row }) => {
+                    const workOrder = row.original
+                    return (
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleViewWorkOrder(workOrder)}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleEditWorkOrder(workOrder)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        {!workOrder.technicianName && (
+                          <Button variant="ghost" size="sm">
+                            <UserPlus className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {workOrder.status !== "completed" && (
+                          <Button variant="ghost" size="sm">
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    )
+                  }
+                }
+              ]}
+              data={filteredWorkOrders}
+              searchKey="customerName"
+              searchPlaceholder="Search work orders..."
+              title="Work Orders"
+            />
           </CardContent>
         </Card>
       </div>

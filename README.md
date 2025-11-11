@@ -27,7 +27,27 @@ npm install --legacy-peer-deps
 ```
 
 ### 2. Database Setup
-Ensure your MySQL database is running and update `.env.local`:
+Ensure your MySQL database is running and set up the database:
+
+```bash
+# Connect to MySQL as root
+mysql -u root -p
+
+# Create/recreate database
+DROP DATABASE IF EXISTS emmis_db;
+CREATE DATABASE emmis_db;
+GRANT ALL PRIVILEGES ON emmis_db.* TO 'appuser'@'%';
+FLUSH PRIVILEGES;
+exit
+
+# Import database structure
+mysql -u root -p emmis_db < db_backups/original_emmis_dev.sql
+
+# Import sample data
+mysql -u root -p emmis_db < db_backups/run_all_inserts.sql
+```
+
+Update `.env.local`:
 ```env
 DATABASE_URL="mysql://appuser:wolverine89@localhost:3306/emmis_db"
 ```

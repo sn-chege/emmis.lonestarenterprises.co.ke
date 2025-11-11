@@ -22,7 +22,8 @@ export default function DashboardPage() {
     activeWorkOrders: 0,
     overdueWorkOrders: 0,
     activeMaintenance: 0,
-    activeLeases: 0
+    activeLeases: 0,
+    totalRevenue: 0
   })
   const [recentActivity, setRecentActivity] = useState([])
   const [loading, setLoading] = useState(true)

@@ -16,6 +16,8 @@ import { api } from "@/lib/api"
 import type { User, UserRole, UserStatus } from "@/lib/types"
 import { formatDate } from "@/lib/utils/format"
 import { useNotifications } from "@/components/notification-provider"
+import { SoftDeleteToggle } from "@/components/soft-delete-toggle"
+import { DataTable } from "@/components/ui/data-table"
 
 export default function UsersPage() {
   const { notifySuccess, notifyError, notifyDelete } = useNotifications()
@@ -30,6 +32,7 @@ export default function UsersPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleted, setShowDeleted] = useState(false)
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -72,38 +75,38 @@ export default function UsersPage() {
     setIsDeleting(true)
     try {
       await api.deleteUser(userToDelete.id)
-      setUsers(users.filter((u) => u.id !== userToDelete.id))
+      
+      // Update users list directly without refetching
+      setUsers(prev => prev.filter(u => u.id !== userToDelete.id))
+      
       notifyDelete("User Deleted", `${userToDelete.name} has been deleted successfully.`)
-      setDeleteDialogOpen(false)
-      setUserToDelete(null)
     } catch (error) {
       console.error('Delete user error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to delete user'
       notifyError("Delete Failed", errorMessage)
     } finally {
       setIsDeleting(false)
+      setDeleteDialogOpen(false)
+      setUserToDelete(null)
     }
   }
 
   const handleSaveUser = async (userData: Partial<User>) => {
     try {
       if (modalMode === "add") {
-        const newUser = await api.createUser({
-          id: `USR${String(users.length + 1).padStart(3, "0")}`,
-          ...userData,
-          status: userData.status || "active",
-        })
-        setUsers([...users, newUser])
+        const newUser = await api.createUser(userData)
+        setUsers(prevUsers => [...prevUsers, newUser])
         notifySuccess("User Added", "User has been added successfully.")
-        setModalOpen(false)
       } else if (modalMode === "edit" && selectedUser) {
         const updatedUser = await api.updateUser(selectedUser.id, userData)
-        setUsers(users.map((u) => (u.id === selectedUser.id ? updatedUser : u)))
+        setUsers(prevUsers => prevUsers.map((u) => (u.id === selectedUser.id ? updatedUser : u)))
         notifySuccess("User Updated", "User has been updated successfully.")
-        setModalOpen(false)
       }
+      setModalOpen(false)
     } catch (error) {
-      // Error will be handled by the modal's notification system
+      console.error('Save user error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save user'
+      notifyError("Save Failed", errorMessage)
       throw error
     }
   }
@@ -130,19 +133,25 @@ export default function UsersPage() {
   const inactiveUsers = users.filter((u) => u.status === "inactive").length
   const suspendedUsers = users.filter((u) => u.status === "suspended").length
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const data = await api.getUsers()
-        setUsers(data)
-      } catch (error) {
-        notifyError("Error", "Failed to load users")
-      } finally {
-        setLoading(false)
-      }
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      const data = await api.getUsers(showDeleted)
+      setUsers(data)
+    } catch (error) {
+      notifyError("Error", "Failed to load users")
+    } finally {
+      setLoading(false)
     }
+  }
+
+  const handleToggleDeleted = (show: boolean) => {
+    setShowDeleted(show)
+  }
+
+  useEffect(() => {
     fetchUsers()
-  }, [])
+  }, [showDeleted])
 
   if (loading) {
     return (
@@ -157,15 +166,22 @@ export default function UsersPage() {
   return (
     <ProtectedLayout>
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">User Management</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">User Management</h1>
             <p className="text-muted-foreground">Manage system users and their permissions</p>
           </div>
-          <Button onClick={handleAddUser}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add User
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <SoftDeleteToggle 
+              showDeleted={showDeleted} 
+              onToggle={handleToggleDeleted}
+              deletedCount={showDeleted ? users.length : undefined}
+            />
+            <Button onClick={handleAddUser} className="w-full sm:w-auto">
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add User
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-4">
@@ -247,70 +263,77 @@ export default function UsersPage() {
               </Select>
             </div>
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Last Login</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
-                        No users found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredUsers.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{getRoleBadge(user.role)}</TableCell>
-                        <TableCell>{user.department || "N/A"}</TableCell>
-                        <TableCell>{getStatusBadge(user.status)}</TableCell>
-                        <TableCell>{user.lastLogin ? formatDate(user.lastLogin) : "Never"}</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleViewUser(user)}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit User
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDeleteUser(user)} className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete User
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable 
+              columns={[
+                { accessorKey: "name", header: "Name" },
+                { accessorKey: "email", header: "Email" },
+                { 
+                  accessorKey: "role", 
+                  header: "Role",
+                  cell: ({ row }) => getRoleBadge(row.getValue("role"))
+                },
+                { 
+                  accessorKey: "department", 
+                  header: "Department",
+                  cell: ({ row }) => row.getValue("department") || "N/A"
+                },
+                { 
+                  accessorKey: "status", 
+                  header: "Status",
+                  cell: ({ row }) => getStatusBadge(row.getValue("status"))
+                },
+                { 
+                  accessorKey: "lastLogin", 
+                  header: "Last Login",
+                  cell: ({ row }) => row.getValue("lastLogin") ? formatDate(row.getValue("lastLogin")) : "Never"
+                },
+                {
+                  id: "actions",
+                  header: "Actions",
+                  cell: ({ row }) => {
+                    const user = row.original
+                    return (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewUser(user)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit User
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeleteUser(user)} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete User
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )
+                  }
+                }
+              ]}
+              data={filteredUsers}
+              searchKey="name"
+              searchPlaceholder="Search users..."
+              title="Users"
+            />
           </CardContent>
         </Card>
 
         <UserModal
           open={modalOpen}
-          onOpenChange={setModalOpen}
+          onOpenChange={(open) => {
+            setModalOpen(open)
+            if (!open) {
+              setSelectedUser(null)
+            }
+          }}
           mode={modalMode}
           user={selectedUser}
           onSave={handleSaveUser}
@@ -318,7 +341,14 @@ export default function UsersPage() {
 
         <DeleteConfirmationDialog
           open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
+          onOpenChange={(open) => {
+            if (!isDeleting) {
+              setDeleteDialogOpen(open)
+              if (!open) {
+                setUserToDelete(null)
+              }
+            }
+          }}
           title="Delete User"
           description={`Are you sure you want to delete ${userToDelete?.name}? This action cannot be undone and will permanently remove the user from the system.`}
           onConfirm={confirmDeleteUser}

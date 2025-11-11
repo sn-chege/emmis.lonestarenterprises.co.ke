@@ -14,6 +14,8 @@ import type { Asset } from "@/lib/types"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
 import { AssetModal } from "@/components/assets/asset-modal"
 import { useNotifications } from "@/components/notification-provider"
+import { DataTable } from "@/components/ui/data-table"
+import { useTableExport } from "@/hooks/use-table-export"
 
 export default function AssetsPage() {
   const { notifySuccess, notifyError, notifyDelete } = useNotifications()
@@ -45,6 +47,20 @@ export default function AssetsPage() {
       return matchesSearch && matchesCustomer && matchesCondition && matchesStatus
     })
   }, [assets, searchTerm, customerFilter, conditionFilter, statusFilter])
+
+  const assetColumns = [
+    { accessorKey: "id", header: "Asset ID" },
+    { accessorKey: "make", header: "Make" },
+    { accessorKey: "model", header: "Model" },
+    { accessorKey: "serialNumber", header: "Serial Number" },
+    { accessorKey: "customerName", header: "Customer" },
+    { accessorKey: "location", header: "Location" },
+    { accessorKey: "conditionStatus", header: "Condition" },
+    { accessorKey: "operationalStatus", header: "Status" },
+    { accessorKey: "currentValue", header: "Current Value" },
+  ]
+
+  const { exportToExcel } = useTableExport(filteredAssets, assetColumns, "Assets")
 
   const clearFilters = () => {
     setSearchTerm("")
@@ -110,7 +126,8 @@ export default function AssetsPage() {
     }
   }
 
-  const exportToExcel = () => {
+  const handleExportToExcel = () => {
+    exportToExcel()
     notifySuccess("Export Started", "Exporting asset data to Excel...")
   }
 
@@ -181,7 +198,7 @@ export default function AssetsPage() {
             <p className="text-slate-600 mt-1">Manage and track all equipment and assets</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button variant="outline" onClick={exportToExcel}>
+            <Button variant="outline" onClick={handleExportToExcel}>
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
@@ -251,109 +268,121 @@ export default function AssetsPage() {
         </Card>
 
         <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Asset ID</TableHead>
-                    <TableHead>Equipment Details</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Condition</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Value</TableHead>
-                    <TableHead>Warranty</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAssets.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-slate-500">
-                        No assets found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredAssets.map((asset) => (
-                      <TableRow key={asset.id}>
-                        <TableCell className="font-semibold">{asset.id}</TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-semibold text-slate-900">
-                              {asset.make} {asset.model}
-                            </div>
-                            <div className="text-sm text-slate-600">{asset.category}</div>
-                            <div className="text-xs text-slate-500">SN: {asset.serialNumber}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium text-slate-900">{asset.customerName}</div>
-                            <div className="text-sm text-slate-600">{asset.contactPerson}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium text-slate-900">{asset.location}</div>
-                            <div className="text-sm text-slate-600">{asset.locationDetails}</div>
-                            <Badge variant="outline" className="text-xs mt-1">
-                              {asset.locationType}
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getConditionBadgeVariant(asset.conditionStatus)} className="capitalize">
-                            {asset.conditionStatus}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusBadgeVariant(asset.operationalStatus)} className="capitalize">
-                            {asset.operationalStatus}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-semibold text-slate-900">{formatCurrency(asset.currentValue)}</div>
-                            <div className="text-xs text-slate-500">
-                              Purchase: {formatCurrency(asset.purchasePrice)}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {asset.warrantyEnd ? (
-                              <>
-                                <div className="text-slate-900">Until {formatDate(asset.warrantyEnd)}</div>
-                                <div className="text-xs text-slate-500">{asset.warrantyProvider}</div>
-                              </>
-                            ) : (
-                              <span className="text-slate-500">No warranty</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => handleViewAsset(asset)}>
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleEditAsset(asset)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Wrench className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <History className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+          <CardContent className="p-6">
+            <DataTable 
+              columns={[
+                { accessorKey: "id", header: "Asset ID" },
+                { 
+                  accessorKey: "make", 
+                  header: "Equipment Details",
+                  cell: ({ row }) => (
+                    <div>
+                      <div className="font-semibold text-slate-900">
+                        {row.getValue("make")} {row.original.model}
+                      </div>
+                      <div className="text-sm text-slate-600">{row.original.category}</div>
+                      <div className="text-xs text-slate-500">SN: {row.original.serialNumber}</div>
+                    </div>
+                  )
+                },
+                { 
+                  accessorKey: "customerName", 
+                  header: "Customer",
+                  cell: ({ row }) => (
+                    <div>
+                      <div className="font-medium text-slate-900">{row.getValue("customerName")}</div>
+                      <div className="text-sm text-slate-600">{row.original.contactPerson}</div>
+                    </div>
+                  )
+                },
+                { 
+                  accessorKey: "location", 
+                  header: "Location",
+                  cell: ({ row }) => (
+                    <div>
+                      <div className="font-medium text-slate-900">{row.getValue("location")}</div>
+                      <div className="text-sm text-slate-600">{row.original.locationDetails}</div>
+                      <Badge variant="outline" className="text-xs mt-1">
+                        {row.original.locationType}
+                      </Badge>
+                    </div>
+                  )
+                },
+                { 
+                  accessorKey: "conditionStatus", 
+                  header: "Condition",
+                  cell: ({ row }) => (
+                    <Badge variant={getConditionBadgeVariant(row.getValue("conditionStatus"))} className="capitalize">
+                      {row.getValue("conditionStatus")}
+                    </Badge>
+                  )
+                },
+                { 
+                  accessorKey: "operationalStatus", 
+                  header: "Status",
+                  cell: ({ row }) => (
+                    <Badge variant={getStatusBadgeVariant(row.getValue("operationalStatus"))} className="capitalize">
+                      {row.getValue("operationalStatus")}
+                    </Badge>
+                  )
+                },
+                { 
+                  accessorKey: "currentValue", 
+                  header: "Value",
+                  cell: ({ row }) => (
+                    <div>
+                      <div className="font-semibold text-slate-900">{formatCurrency(row.getValue("currentValue"))}</div>
+                      <div className="text-xs text-slate-500">
+                        Purchase: {formatCurrency(row.original.purchasePrice)}
+                      </div>
+                    </div>
+                  )
+                },
+                { 
+                  accessorKey: "warrantyEnd", 
+                  header: "Warranty",
+                  cell: ({ row }) => (
+                    <div className="text-sm">
+                      {row.getValue("warrantyEnd") ? (
+                        <>
+                          <div className="text-slate-900">Until {formatDate(row.getValue("warrantyEnd"))}</div>
+                          <div className="text-xs text-slate-500">{row.original.warrantyProvider}</div>
+                        </>
+                      ) : (
+                        <span className="text-slate-500">No warranty</span>
+                      )}
+                    </div>
+                  )
+                },
+                {
+                  id: "actions",
+                  header: "Actions",
+                  cell: ({ row }) => {
+                    const asset = row.original
+                    return (
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleViewAsset(asset)}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleEditAsset(asset)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <Wrench className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <History className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )
+                  }
+                }
+              ]}
+              data={filteredAssets}
+              searchKey="make"
+              searchPlaceholder="Search equipment..."
+              title="Assets"
+            />
           </CardContent>
         </Card>
       </div>

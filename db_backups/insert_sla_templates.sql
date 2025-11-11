@@ -1,0 +1,6 @@
+-- Insert sample SLA templates
+INSERT INTO sla_templates (id, name, description, service_level, response_time, resolution_time, availability, penalties, status, terms, folder_path) VALUES
+('SLA001', 'Bronze Support Package', 'Basic support for standard equipment with business hours coverage', 'basic', '72 hours', '168 hours', '99.0%', 'Service credits for downtime exceeding SLA', 'active', '[]', 'sla-agreements/SLA001'),
+('SLA002', 'Silver Support Package', 'Enhanced support with faster response times and extended hours', 'standard', '24 hours', '72 hours', '99.5%', 'Service credits and priority escalation', 'active', '[]', 'sla-agreements/SLA002'),
+('SLA003', 'Gold Support Package', 'Premium support for critical equipment with 24/7 coverage', 'premium', '4 hours', '24 hours', '99.9%', 'Service credits and guaranteed response', 'active', '[]', 'sla-agreements/SLA003'),
+('SLA004', 'Platinum Support Package', 'Enterprise-grade support with immediate response and dedicated resources', 'enterprise', '1 hour', '8 hours', '99.95%', 'Service credits, escalation, and compensation', 'active', '[]', 'sla-agreements/SLA004');

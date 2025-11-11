@@ -16,6 +16,31 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `activity_logs`
+--
+
+DROP TABLE IF EXISTS `activity_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+
+CREATE TABLE `activity_logs` (
+  `id` varchar(50) NOT NULL,
+  `user_id` varchar(50) NOT NULL,
+  `user_name` varchar(255) NOT NULL,
+  `action` enum('login','logout','create','update','delete','view') NOT NULL,
+  `module` varchar(100) NOT NULL,
+  `entity_type` varchar(100) NOT NULL,
+  `entity_id` varchar(50) DEFAULT NULL,
+  `entity_name` varchar(255) DEFAULT NULL,
+  `description` text NOT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` text DEFAULT NULL,
+  `metadata` text DEFAULT NULL,
+  `created_date` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`)
+);
+
+--
 -- Table structure for table `assets`
 --
 
@@ -50,6 +75,7 @@ CREATE TABLE `assets` (
   `notes` text COLLATE utf8mb4_unicode_ci,
   `created_date` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_date` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `assets_serial_number_key` (`serial_number`),
   KEY `assets_serial_number_idx` (`serial_number`),
@@ -59,15 +85,6 @@ CREATE TABLE `assets` (
   CONSTRAINT `assets_customer_id_fkey` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `assets`
---
-
-LOCK TABLES `assets` WRITE;
-/*!40000 ALTER TABLE `assets` DISABLE KEYS */;
-/*!40000 ALTER TABLE `assets` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `consumable_parts`
@@ -89,9 +106,6 @@ CREATE TABLE `consumable_parts` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Dumping data for table `consumable_parts`
---
 
 LOCK TABLES `consumable_parts` WRITE;
 /*!40000 ALTER TABLE `consumable_parts` DISABLE KEYS */;
@@ -127,6 +141,7 @@ CREATE TABLE `customers` (
   `supervisor` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_date` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_date` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `customers_company_name_idx` (`company_name`),
   KEY `customers_status_idx` (`status`),
@@ -135,13 +150,9 @@ CREATE TABLE `customers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Dumping data for table `customers`
---
 
 LOCK TABLES `customers` WRITE;
 /*!40000 ALTER TABLE `customers` DISABLE KEYS */;
-INSERT INTO `customers` VALUES ('CUST001','Taraji Gardens Limited','Technology','2018','Stanley Ngugi','Nurse','tarajigardensltd@gmail.com','+254714750345','Thika Rd ',NULL,'Active','Pending','N/A',1000.00,0,NULL,NULL,NULL,NULL,'2025-10-27 14:50:13.957','2025-10-27 14:50:13.957');
 /*!40000 ALTER TABLE `customers` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -168,9 +179,7 @@ CREATE TABLE `lease_payments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Dumping data for table `lease_payments`
---
+
 
 LOCK TABLES `lease_payments` WRITE;
 /*!40000 ALTER TABLE `lease_payments` DISABLE KEYS */;
@@ -203,6 +212,7 @@ CREATE TABLE `leases` (
   `notes` text COLLATE utf8mb4_unicode_ci,
   `created_date` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_date` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `leases_customer_id_idx` (`customer_id`),
   KEY `leases_status_idx` (`status`),
@@ -212,14 +222,6 @@ CREATE TABLE `leases` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Dumping data for table `leases`
---
-
-LOCK TABLES `leases` WRITE;
-/*!40000 ALTER TABLE `leases` DISABLE KEYS */;
-/*!40000 ALTER TABLE `leases` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `maintenance_parts`
@@ -241,14 +243,6 @@ CREATE TABLE `maintenance_parts` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Dumping data for table `maintenance_parts`
---
-
-LOCK TABLES `maintenance_parts` WRITE;
-/*!40000 ALTER TABLE `maintenance_parts` DISABLE KEYS */;
-/*!40000 ALTER TABLE `maintenance_parts` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `maintenance_schedules`
@@ -281,6 +275,7 @@ CREATE TABLE `maintenance_schedules` (
   `work_carried_out` text COLLATE utf8mb4_unicode_ci,
   `notes` text COLLATE utf8mb4_unicode_ci,
   `updated_date` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `maintenance_schedules_equipment_id_idx` (`equipment_id`),
   KEY `maintenance_schedules_status_idx` (`status`),
@@ -289,15 +284,6 @@ CREATE TABLE `maintenance_schedules` (
   CONSTRAINT `maintenance_schedules_equipment_id_fkey` FOREIGN KEY (`equipment_id`) REFERENCES `assets` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `maintenance_schedules`
---
-
-LOCK TABLES `maintenance_schedules` WRITE;
-/*!40000 ALTER TABLE `maintenance_schedules` DISABLE KEYS */;
-/*!40000 ALTER TABLE `maintenance_schedules` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `maintenance_templates`
@@ -322,15 +308,6 @@ CREATE TABLE `maintenance_templates` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `maintenance_templates`
---
-
-LOCK TABLES `maintenance_templates` WRITE;
-/*!40000 ALTER TABLE `maintenance_templates` DISABLE KEYS */;
-/*!40000 ALTER TABLE `maintenance_templates` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `repair_history`
 --
 
@@ -352,14 +329,6 @@ CREATE TABLE `repair_history` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Dumping data for table `repair_history`
---
-
-LOCK TABLES `repair_history` WRITE;
-/*!40000 ALTER TABLE `repair_history` DISABLE KEYS */;
-/*!40000 ALTER TABLE `repair_history` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `reports`
@@ -387,14 +356,6 @@ CREATE TABLE `reports` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Dumping data for table `reports`
---
-
-LOCK TABLES `reports` WRITE;
-/*!40000 ALTER TABLE `reports` DISABLE KEYS */;
-/*!40000 ALTER TABLE `reports` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `system_settings`
@@ -415,15 +376,6 @@ CREATE TABLE `system_settings` (
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Dumping data for table `system_settings`
---
-
-LOCK TABLES `system_settings` WRITE;
-/*!40000 ALTER TABLE `system_settings` DISABLE KEYS */;
-INSERT INTO `system_settings` VALUES (1,'app_name','EMMIS','Application Name','2025-10-27 14:34:26.725'),(2,'app_version','1.0.0','Application Version','2025-10-27 14:34:26.727'),(3,'currency','KES','Default Currency','2025-10-27 14:34:26.729'),(4,'date_format','YYYY-MM-DD','Default Date Format','2025-10-27 14:34:26.730'),(5,'timezone','Africa/Nairobi','Default Timezone','2025-10-27 14:34:26.732');
-/*!40000 ALTER TABLE `system_settings` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `users`
@@ -450,6 +402,7 @@ CREATE TABLE `users` (
   `supervisor_id` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `supervisor_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `hire_date` date DEFAULT NULL,
+  `deleted_at` datetime(3) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `users_email_key` (`email`),
   KEY `users_email_idx` (`email`),
@@ -459,19 +412,6 @@ CREATE TABLE `users` (
   CONSTRAINT `users_supervisor_id_fkey` FOREIGN KEY (`supervisor_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `users`
---
-
-LOCK TABLES `users` WRITE;
-/*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES 
-('USR001','admin45@emmis.com','$2a$10$nyaFDBxkGIeGWZSpaf8h8eZZQMlRUa/SaKjZeLSJK.JU5LyjSI2zi','System Administrator','admin',NULL,NULL,NULL,'active','2025-10-27 18:50:44.643','2025-10-27 14:34:26.721','2025-10-27 18:50:44.646',NULL,0,NULL,NULL,NULL),
-('USR002','supervisor@emmis.com','$2a$10$nyaFDBxkGIeGWZSpaf8h8eZZQMlRUa/SaKjZeLSJK.JU5LyjSI2zi','John Supervisor','supervisor',NULL,'+254712345678','Operations','active',NULL,'2025-10-27 14:34:26.721','2025-10-27 14:34:26.721',NULL,0,NULL,NULL,NULL),
-('USR003','technician@emmis.com','$2a$10$nyaFDBxkGIeGWZSpaf8h8eZZQMlRUa/SaKjZeLSJK.JU5LyjSI2zi','Mike Technician','technician',NULL,'+254787654321','Field Service','active',NULL,'2025-10-27 14:34:26.721','2025-10-27 14:34:26.721','Equipment Maintenance',2,'USR002','John Supervisor','2023-01-15');
-/*!40000 ALTER TABLE `users` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `work_orders`
@@ -508,22 +448,68 @@ CREATE TABLE `work_orders` (
   `actual_cost` decimal(10,2) DEFAULT NULL,
   `cancel_reason` text COLLATE utf8mb4_unicode_ci,
   `updated_date` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `work_orders_status_idx` (`status`),
   KEY `work_orders_priority_idx` (`priority`),
   KEY `work_orders_type_idx` (`type`),
   KEY `work_orders_due_date_idx` (`due_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+DROP TABLE IF EXISTS `contract_templates`;
+-- Create contract_templates table
+CREATE TABLE IF NOT EXISTS contract_templates (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    type VARCHAR(50) DEFAULT 'CUSTOM',
+    size VARCHAR(50),
+    version VARCHAR(20) DEFAULT '1.0',
+    author VARCHAR(255) DEFAULT 'System',
+    tags TEXT,
+    elements LONGTEXT,
+    folder_path VARCHAR(500),
+    status VARCHAR(50) DEFAULT 'active',
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_modified DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    INDEX idx_name (name),
+    INDEX idx_type (type),
+    INDEX idx_status (status)
+);
+
+
+DROP TABLE IF EXISTS `sla_templates`;
+-- Create sla_templates table
+CREATE TABLE IF NOT EXISTS sla_templates (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    customer_id VARCHAR(50),
+    customer_name VARCHAR(255),
+    service_level VARCHAR(50) NOT NULL,
+    response_time VARCHAR(100) NOT NULL,
+    resolution_time VARCHAR(100) NOT NULL,
+    availability VARCHAR(100) NOT NULL,
+    penalties TEXT,
+    start_date DATE,
+    end_date DATE,
+    status VARCHAR(50) DEFAULT 'pending',
+    terms LONGTEXT,
+    folder_path VARCHAR(500),
+    created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_modified DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    INDEX idx_name (name),
+    INDEX idx_service_level (service_level),
+    INDEX idx_status (status),
+    INDEX idx_customer_id (customer_id)
+);
+
+
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Dumping data for table `work_orders`
---
-
-LOCK TABLES `work_orders` WRITE;
-/*!40000 ALTER TABLE `work_orders` DISABLE KEYS */;
-/*!40000 ALTER TABLE `work_orders` ENABLE KEYS */;
-UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -534,4 +520,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-28  9:14:18
+-- Dump completed on 2025-10-28  9:14:18  
