@@ -27,26 +27,64 @@ const DEMO_USERS = {
   },
 }
 
+function getNext6AM(): number {
+  const now = new Date()
+  const next6AM = new Date()
+  next6AM.setHours(6, 0, 0, 0)
+  
+  if (now.getHours() >= 6) {
+    next6AM.setDate(next6AM.getDate() + 1)
+  }
+  
+  return next6AM.getTime()
+}
+
 export function login(email: string, password: string): User | null {
   const user = DEMO_USERS[email as keyof typeof DEMO_USERS]
   if (user && user.password === password) {
     const { password: _, ...userWithoutPassword } = user
-    localStorage.setItem("emmis_user", JSON.stringify(userWithoutPassword))
+    const sessionData = {
+      user: userWithoutPassword,
+      expiresAt: getNext6AM()
+    }
+    localStorage.setItem("emmis_session", JSON.stringify(sessionData))
     return userWithoutPassword
   }
   return null
 }
 
 export function logout() {
-  localStorage.removeItem("emmis_user")
+  localStorage.removeItem("emmis_session")
 }
 
 export function getCurrentUser(): User | null {
   if (typeof window === "undefined") return null
-  const userStr = localStorage.getItem("emmis_user")
-  return userStr ? JSON.parse(userStr) : null
+  const sessionStr = localStorage.getItem("emmis_session")
+  if (!sessionStr) return null
+  
+  const session = JSON.parse(sessionStr)
+  if (Date.now() > session.expiresAt) {
+    localStorage.removeItem("emmis_session")
+    return null
+  }
+  
+  return session.user
 }
 
 export function isAuthenticated(): boolean {
   return getCurrentUser() !== null
+}
+
+export function checkSessionExpiry(): boolean {
+  if (typeof window === "undefined") return false
+  const sessionStr = localStorage.getItem("emmis_session")
+  if (!sessionStr) return false
+  
+  const session = JSON.parse(sessionStr)
+  if (Date.now() > session.expiresAt) {
+    localStorage.removeItem("emmis_session")
+    return true
+  }
+  
+  return false
 }

@@ -3,7 +3,7 @@
 import type React from "react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { isAuthenticated } from "@/lib/auth"
+import { isAuthenticated, checkSessionExpiry } from "@/lib/auth"
 import { AppSidebar } from "./app-sidebar"
 import { DatabaseWarningBanner } from "./database-warning-banner"
 
@@ -19,7 +19,17 @@ export function ProtectedLayout({ children }: { children: React.ReactNode }) {
 
     if (!authStatus) {
       router.push("/login")
+      return
     }
+
+    // Check session expiry every minute
+    const interval = setInterval(() => {
+      if (checkSessionExpiry()) {
+        router.push("/login")
+      }
+    }, 60000)
+
+    return () => clearInterval(interval)
   }, [router])
 
   if (!isMounted || isAuth === null) {
