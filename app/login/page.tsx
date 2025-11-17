@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { api } from "@/lib/api"
+import { login } from "@/lib/auth"
 import { Wrench, AlertCircle, Cog, Users, TrendingUp, Shield } from "lucide-react"
 import { DatabaseStatus } from "@/components/database-status"
 
@@ -26,10 +26,8 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const result = await api.login(email, password)
-      if (result.user) {
-        // Store user in localStorage for now
-        localStorage.setItem('emmis_user', JSON.stringify(result.user))
+      const user = login(email, password)
+      if (user) {
         router.push("/dashboard")
       } else {
         setError("Invalid email or password")

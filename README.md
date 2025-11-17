@@ -210,6 +210,7 @@ All relationships are properly defined with foreign keys and cascading deletes w
 After each automated deployment, you need to run these commands on the server to fix Prisma client compatibility:
 
 ```bash
+source /home/lonestar/nodevenv/emmis.lonestarenterprises.co.ke/20/bin/activate && cd /home/lonestar/emmis.lonestarenterprises.co.ke
 npm install --legacy-peer-deps
 cp -r .prisma/* node_modules/.prisma/
 cp -r @prisma/* node_modules/@prisma/

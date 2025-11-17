@@ -9,6 +9,7 @@ import { useEffect, useState } from "react"
 import { getDashboardStats, api } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { IPLocation } from "@/components/ip-location"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -263,6 +264,9 @@ export default function DashboardPage() {
                       <p className="text-sm text-slate-600 mt-1">{activity.description}</p>
                       <p className="text-xs text-slate-400 mt-2">
                         {activity.userName} • {new Date(activity.createdDate).toLocaleString()}
+                        {activity.ipAddress && (
+                          <IPLocation ip={activity.ipAddress} />
+                        )}
                       </p>
                     </div>
                   </div>
