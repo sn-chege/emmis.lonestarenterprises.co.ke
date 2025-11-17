@@ -249,7 +249,24 @@ export default function DashboardPage() {
               {loading ? (
                 <div className="text-center py-4 text-slate-500">Loading activities...</div>
               ) : recentActivity.length === 0 ? (
-                <div className="text-center py-4 text-slate-500">No recent activities</div>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4 pb-4 border-b border-slate-200">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                      <ClipboardList className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-slate-900">System Initialized</h4>
+                      <p className="text-sm text-slate-600 mt-1">EMMIS system started successfully</p>
+                      <p className="text-xs text-slate-400 mt-2">
+                        System • {new Date().toLocaleString()}
+                        <IPLocation ip="127.0.0.1" />
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-center py-2 text-slate-400 text-sm">
+                    Activity logs will appear here as users interact with the system
+                  </div>
+                </div>
               ) : (
                 recentActivity.map((activity: any) => (
                   <div
