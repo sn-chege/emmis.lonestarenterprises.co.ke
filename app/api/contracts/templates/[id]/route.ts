@@ -48,7 +48,12 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     })
     
     return NextResponse.json({ success: true })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete template' }, { status: 500 })
+  } catch (error: any) {
+    console.error('Delete template error:', error)
+    return NextResponse.json({ 
+      error: 'Failed to delete template',
+      details: error.message,
+      code: error.code 
+    }, { status: 500 })
   }
 }

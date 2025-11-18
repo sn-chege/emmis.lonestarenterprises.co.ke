@@ -16,6 +16,7 @@ import { AssetModal } from "@/components/assets/asset-modal"
 import { useNotifications } from "@/components/notification-provider"
 import { DataTable } from "@/components/ui/data-table"
 import { useTableExport } from "@/hooks/use-table-export"
+import { CSVImportModal } from "@/components/ui/csv-import-modal"
 
 export default function AssetsPage() {
   const { notifySuccess, notifyError, notifyDelete } = useNotifications()
@@ -29,6 +30,7 @@ export default function AssetsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add")
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
+  const [importModalOpen, setImportModalOpen] = useState(false)
 
   const filteredAssets = useMemo(() => {
     return assets.filter((asset) => {
@@ -131,6 +133,26 @@ export default function AssetsPage() {
     notifySuccess("Export Started", "Exporting asset data to Excel...")
   }
 
+  const handleImport = async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    const response = await fetch('/api/assets/import', {
+      method: 'POST',
+      body: formData
+    })
+    
+    const result = await response.json()
+    
+    if (result.success) {
+      const assetsData = await api.getAssets()
+      setAssets(assetsData)
+      notifySuccess("Import Completed", result.message)
+    }
+    
+    return result
+  }
+
   const getConditionBadgeVariant = (condition: string) => {
     switch (condition) {
       case "new":
@@ -202,7 +224,7 @@ export default function AssetsPage() {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button variant="outline" onClick={() => notifySuccess("Import Started", "Import equipment functionality coming soon...")}>
+            <Button variant="outline" onClick={() => setImportModalOpen(true)}>
               <Download className="w-4 h-4 mr-2 rotate-180" />
               Import
             </Button>
@@ -394,6 +416,13 @@ export default function AssetsPage() {
         asset={selectedAsset}
         onSave={handleSaveAsset}
         onDelete={handleDeleteAsset}
+      />
+
+      <CSVImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        entityType="assets"
+        onImport={handleImport}
       />
     </ProtectedLayout>
   )

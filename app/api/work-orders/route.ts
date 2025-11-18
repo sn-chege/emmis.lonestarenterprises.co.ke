@@ -17,7 +17,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
-    const { consumableParts, ...rawData } = data
+    const { consumableParts, customerId, equipmentId, ...rawData } = data
     
     // Generate work order ID
     const lastWorkOrder = await prisma.workOrder.findFirst({

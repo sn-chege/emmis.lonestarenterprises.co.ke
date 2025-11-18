@@ -220,7 +220,28 @@ export function QuillDocumentEditor({ templateName, onSave, onCancel }: QuillDoc
         </div>
 
         {/* Sidebar with Editing Tools */}
-        <div className="w-80 border-l bg-gray-50 p-4 overflow-y-auto">
+        <div className="w-80 border-l bg-gray-50 p-4 overflow-y-auto max-h-screen">
+          {/* Quick Templates */}
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-sm">Quick Templates</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button size="sm" variant="outline" className="w-full justify-start" onClick={() => {
+                const template = `# EQUIPMENT LEASE AGREEMENT\n\n**Agreement Number:** [AGREEMENT-001]\n**Date:** [DATE]\n**Lessor:** [COMPANY NAME]\n**Address:** [COMPANY ADDRESS]\n**Phone:** [PHONE] | **Email:** [EMAIL]\n\n**Lessee:** [CLIENT NAME]\n**Address:** [CLIENT ADDRESS]\n**Phone:** [CLIENT PHONE] | **Email:** [CLIENT EMAIL]\n\n## EQUIPMENT DETAILS\n\n**Equipment Type:** [EQUIPMENT TYPE]\n**Make/Model:** [MAKE/MODEL]\n**Serial Number:** [SERIAL NUMBER]\n**Year:** [YEAR]\n**Condition:** [NEW/USED/REFURBISHED]\n**Current Value:** $[VALUE]\n\n## LEASE TERMS\n\n**Lease Period:** [DURATION] months\n**Start Date:** [START DATE]\n**End Date:** [END DATE]\n**Monthly Payment:** $[MONTHLY AMOUNT]\n**Security Deposit:** $[DEPOSIT AMOUNT]\n**Late Fee:** $[LATE FEE] (after [GRACE PERIOD] days)\n\n--- PAGE BREAK ---\n\n## RESPONSIBILITIES\n\n### Lessor Responsibilities:\n• Deliver equipment in working condition\n• Provide necessary documentation\n• Maintain insurance on equipment\n• Handle major repairs (over $[AMOUNT])\n\n### Lessee Responsibilities:\n• Use equipment properly and safely\n• Perform routine maintenance\n• Pay monthly fees on time\n• Return equipment in good condition\n• Notify lessor of any damage immediately\n\n## INSURANCE & LIABILITY\n\n• Lessee must maintain comprehensive insurance\n• Minimum coverage: $[INSURANCE AMOUNT]\n• Lessor must be named as additional insured\n• Lessee liable for theft, damage, or loss\n\n## TERMINATION\n\n• Either party may terminate with [NOTICE PERIOD] days notice\n• Early termination fee: $[TERMINATION FEE]\n• Equipment must be returned within [RETURN DAYS] days\n\n--- PAGE BREAK ---\n\n## SIGNATURES\n\n**LESSOR:**\n\nSignature: ___________________________ Date: __________\nPrint Name: [LESSOR NAME]\nTitle: [TITLE]\n\n**LESSEE:**\n\nSignature: ___________________________ Date: __________\nPrint Name: [LESSEE NAME]\nTitle: [TITLE]\n\n**WITNESS:**\n\nSignature: ___________________________ Date: __________\nPrint Name: [WITNESS NAME]\n\n*This agreement is governed by the laws of [STATE/PROVINCE]*`
+                setContent(template)
+              }}>
+                📋 Equipment Lease Agreement
+              </Button>
+              <Button size="sm" variant="outline" className="w-full justify-start" onClick={() => {
+                const template = `# MAINTENANCE SERVICE REPORT\n\n**Report #:** [REPORT-001]\n**Date:** [DATE]\n**Time:** [START TIME] - [END TIME]\n**Technician:** [TECHNICIAN NAME]\n**Supervisor:** [SUPERVISOR NAME]\n\n## CUSTOMER INFORMATION\n\n**Company:** [CUSTOMER NAME]\n**Contact:** [CONTACT PERSON]\n**Phone:** [PHONE NUMBER]\n**Location:** [SERVICE ADDRESS]\n\n## EQUIPMENT DETAILS\n\n**Equipment:** [EQUIPMENT TYPE]\n**Make/Model:** [MAKE/MODEL]\n**Serial Number:** [SERIAL NUMBER]\n**Hours/Mileage:** [CURRENT HOURS]\n**Last Service:** [LAST SERVICE DATE]\n\n--- PAGE BREAK ---\n\n## WORK PERFORMED\n\n### Scheduled Maintenance:\n• [✓] Oil change and filter replacement\n• [✓] Hydraulic fluid check and top-off\n• [✓] Grease all fittings (12 points)\n• [✓] Visual inspection of belts and hoses\n• [✓] Battery and electrical system check\n• [✓] Tire pressure and condition check\n• [✓] Safety system inspection\n\n### Additional Services:\n• [ADDITIONAL SERVICE 1]\n• [ADDITIONAL SERVICE 2]\n• [ADDITIONAL SERVICE 3]\n\n### Issues Found:\n• [ISSUE 1 - DESCRIPTION]\n• [ISSUE 2 - DESCRIPTION]\n• [ISSUE 3 - DESCRIPTION]\n\n## PARTS & MATERIALS USED\n\n| Part Number | Description | Quantity | Unit Cost | Total |\n|-------------|-------------|----------|-----------|-------|\n| [PART-001] | [Oil Filter] | [2] | $[25.00] | $[50.00] |\n| [PART-002] | [Hydraulic Oil] | [5 gal] | $[15.00] | $[75.00] |\n| [PART-003] | [Grease] | [1 tube] | $[8.00] | $[8.00] |\n\n**Parts Subtotal:** $[133.00]\n**Labor Hours:** [3.5] @ $[85.00]/hr = $[297.50]\n**Tax:** $[21.58]\n**TOTAL:** $[452.08]\n\n--- PAGE BREAK ---\n\n## RECOMMENDATIONS\n\n### Immediate Action Required:\n• [URGENT ITEM 1]\n• [URGENT ITEM 2]\n\n### Recommended Within 30 Days:\n• [RECOMMENDATION 1]\n• [RECOMMENDATION 2]\n\n### Future Maintenance (Next 6 Months):\n• [FUTURE ITEM 1]\n• [FUTURE ITEM 2]\n\n## CUSTOMER FEEDBACK\n\n**Equipment Condition:** [EXCELLENT/GOOD/FAIR/POOR]\n**Service Quality:** [RATING 1-10]\n**Comments:** [CUSTOMER COMMENTS]\n\n## SIGNATURES\n\n**Technician:** _________________________ Date: _______\n[TECHNICIAN NAME]\n\n**Customer:** _________________________ Date: _______\n[CUSTOMER NAME]\n\n**Next Service Due:** [DATE] or [HOURS] hours\n**Service Interval:** [FREQUENCY]`
+                setContent(template)
+              }}>
+                🔧 Maintenance Service Report
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Text Formatting */}
           <Card className="mb-4">
             <CardHeader>
@@ -367,26 +388,7 @@ export function QuillDocumentEditor({ templateName, onSave, onCancel }: QuillDoc
             </CardContent>
           </Card>
 
-          {/* Document Templates */}
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle className="text-sm">Quick Templates</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button size="sm" variant="outline" className="w-full justify-start" onClick={() => {
-                const template = `# EQUIPMENT LEASE AGREEMENT\n\n**Date:** [DATE]\n**Lessor:** [COMPANY NAME]\n**Lessee:** [CLIENT NAME]\n\n## Terms and Conditions\n\n1. **Equipment Description**\n   - Item: [EQUIPMENT]\n   - Serial Number: [SERIAL]\n   - Condition: [CONDITION]\n\n2. **Lease Period**\n   - Start Date: [START DATE]\n   - End Date: [END DATE]\n   - Duration: [DURATION]\n\n3. **Payment Terms**\n   - Monthly Rate: $[AMOUNT]\n   - Payment Due: [DUE DATE]\n   - Late Fee: [LATE FEE]\n\n--- PAGE BREAK ---\n\n## Signatures\n\n**Lessor Signature:** _________________________ Date: _______\n\n**Lessee Signature:** _________________________ Date: _______\n\n`
-                setContent(template)
-              }}>
-                📋 Lease Agreement
-              </Button>
-              <Button size="sm" variant="outline" className="w-full justify-start" onClick={() => {
-                const template = `# MAINTENANCE REPORT\n\n**Date:** [DATE]\n**Technician:** [NAME]\n**Equipment:** [EQUIPMENT]\n\n## Work Performed\n\n• [TASK 1]\n• [TASK 2]\n• [TASK 3]\n\n## Parts Used\n\n| Part | Quantity | Cost |\n|------|----------|------|\n| [PART 1] | [QTY] | $[COST] |\n| [PART 2] | [QTY] | $[COST] |\n\n**Total Cost:** $[TOTAL]\n\n## Notes\n\n[ADDITIONAL NOTES]\n\n**Signature:** _________________________ Date: _______\n`
-                setContent(template)
-              }}>
-                🔧 Maintenance Report
-              </Button>
-            </CardContent>
-          </Card>
+
 
           {/* Document Statistics */}
           <Card>

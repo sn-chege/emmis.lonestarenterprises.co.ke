@@ -12,7 +12,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   return (
     <NotificationContext.Provider value={notification}>
       {children}
-      <div className="fixed bottom-0 right-0 z-50 space-y-2 p-4">
+      <div className="fixed bottom-0 right-0 z-[100] space-y-2 p-4">
         {notification.notifications.map((notif) => (
           <Notification
             key={notif.id}

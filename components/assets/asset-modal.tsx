@@ -109,6 +109,18 @@ export function AssetModal({ open, onOpenChange, mode, asset, onSave, onDelete }
     setIsSubmitting(true)
     
     try {
+      // Check for duplicate serial number only when adding new asset
+      if (mode === "add") {
+        const existingAssets = await api.getAssets()
+        const duplicateAsset = existingAssets.find(
+          (a: Asset) => a.serialNumber.toLowerCase() === formData.serialNumber?.toLowerCase()
+        )
+        if (duplicateAsset) {
+          notifyError("Validation Error", `Serial number already exists for asset: ${duplicateAsset.make} ${duplicateAsset.model} (${duplicateAsset.id})`)
+          return
+        }
+      }
+      
       await onSave(formData)
     } catch (err) {
       notifyError("Error", err instanceof Error ? err.message : 'An error occurred while saving')

@@ -26,9 +26,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params
     const data = await request.json()
+    
+    // Exclude nested relations from update data
+    const { assets, leases, ...updateData } = data
+    
     const customer = await prisma.customer.update({
       where: { id },
-      data,
+      data: updateData,
       include: {
         assets: true,
         leases: true,

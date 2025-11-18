@@ -129,6 +129,7 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
     if (customer) {
       setFormData({
         ...formData,
+        customerId: customerId,
         customerName: customer.companyName,
         contactPerson: customer.contactPerson,
         contactPhone: customer.phone,
@@ -141,6 +142,7 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
     if (asset) {
       setFormData({
         ...formData,
+        equipmentId: assetId,
         equipmentName: `${asset.make} ${asset.model}`,
         equipmentMake: asset.make,
         equipmentModel: asset.model,
@@ -304,7 +306,7 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
                   <Label htmlFor="customerId">
                     Customer <span className="text-red-500">*</span>
                   </Label>
-                  <Select value={formData.customerName || ""} onValueChange={(value) => handleCustomerChange(value)}>
+                  <Select value={formData.customerId || ""} onValueChange={(value) => handleCustomerChange(value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select customer" />
                     </SelectTrigger>
@@ -328,7 +330,7 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
                   <Label htmlFor="equipmentId">
                     Equipment <span className="text-red-500">*</span>
                   </Label>
-                  <Select value={formData.equipmentName || ""} onValueChange={(value) => handleEquipmentChange(value)}>
+                  <Select value={formData.equipmentId || ""} onValueChange={(value) => handleEquipmentChange(value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select equipment" />
                     </SelectTrigger>

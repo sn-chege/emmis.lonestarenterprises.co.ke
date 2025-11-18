@@ -27,9 +27,23 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params
     const data = await request.json()
+    
+    // Clean up the data - remove fields that don't exist in schema and convert dates
+    const { status, condition, customer, repairHistory, maintenanceSchedules, ...rawData } = data
+    
+    // Convert date strings to Date objects
+    const cleanData = {
+      ...rawData,
+      purchaseDate: rawData.purchaseDate ? new Date(rawData.purchaseDate) : null,
+      warrantyStart: rawData.warrantyStart ? new Date(rawData.warrantyStart) : null,
+      warrantyEnd: rawData.warrantyEnd ? new Date(rawData.warrantyEnd) : null,
+      lastServiceDate: rawData.lastServiceDate ? new Date(rawData.lastServiceDate) : null,
+      nextServiceDate: rawData.nextServiceDate ? new Date(rawData.nextServiceDate) : null,
+    }
+    
     const asset = await prisma.asset.update({
       where: { id },
-      data,
+      data: cleanData,
       include: {
         customer: true,
         repairHistory: true,

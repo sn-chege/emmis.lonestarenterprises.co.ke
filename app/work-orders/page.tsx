@@ -16,6 +16,7 @@ import { WorkOrderModal } from "@/components/work-orders/work-order-modal"
 import { useNotifications } from "@/components/notification-provider"
 import { DataTable } from "@/components/ui/data-table"
 import { useTableExport } from "@/hooks/use-table-export"
+import { CSVImportModal } from "@/components/ui/csv-import-modal"
 
 export default function WorkOrdersPage() {
   const { notifySuccess, notifyError, notifyDelete } = useNotifications()
@@ -28,6 +29,7 @@ export default function WorkOrdersPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add")
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null)
+  const [importModalOpen, setImportModalOpen] = useState(false)
 
   const filteredWorkOrders = useMemo(() => {
     return workOrders.filter((wo) => {
@@ -126,6 +128,26 @@ export default function WorkOrdersPage() {
     notifySuccess("Export Started", "Exporting work order data to Excel...")
   }
 
+  const handleImport = async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    const response = await fetch('/api/work-orders/import', {
+      method: 'POST',
+      body: formData
+    })
+    
+    const result = await response.json()
+    
+    if (result.success) {
+      const workOrdersData = await api.getWorkOrders()
+      setWorkOrders(workOrdersData)
+      notifySuccess("Import Completed", result.message)
+    }
+    
+    return result
+  }
+
   const getPriorityBadgeVariant = (priority: string) => {
     switch (priority) {
       case "low":
@@ -194,6 +216,10 @@ export default function WorkOrdersPage() {
             <Button variant="outline" onClick={handleExportToExcel}>
               <Download className="w-4 h-4 mr-2" />
               Export
+            </Button>
+            <Button variant="outline" onClick={() => setImportModalOpen(true)}>
+              <Download className="w-4 h-4 mr-2 rotate-180" />
+              Import
             </Button>
             <Button onClick={handleAddWorkOrder}>
               <Plus className="w-4 h-4 mr-2" />
@@ -374,6 +400,13 @@ export default function WorkOrdersPage() {
         workOrder={selectedWorkOrder}
         onSave={handleSaveWorkOrder}
         onDelete={handleDeleteWorkOrder}
+      />
+
+      <CSVImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        entityType="work-orders"
+        onImport={handleImport}
       />
     </ProtectedLayout>
   )

@@ -26,22 +26,27 @@ export async function POST(request: NextRequest) {
     const data = await request.json()
     
     // Generate unique customer ID
-    const lastCustomer = await prisma.customer.findFirst({
-      orderBy: { id: 'desc' },
-      select: { id: true }
+    const existingCustomers = await prisma.customer.findMany({
+      select: { id: true },
+      where: {
+        id: {
+          startsWith: 'CUST'
+        }
+      }
     })
     
-    let nextNumber = 1
-    if (lastCustomer) {
-      const lastNumber = parseInt(lastCustomer.id.replace('CUST', ''))
-      nextNumber = lastNumber + 1
-    }
+    const existingNumbers = existingCustomers
+      .map(c => parseInt(c.id.replace('CUST', '')))
+      .filter(n => !isNaN(n))
+      .sort((a, b) => b - a)
     
+    const nextNumber = existingNumbers.length > 0 ? existingNumbers[0] + 1 : 1
     const customerId = `CUST${String(nextNumber).padStart(3, '0')}`
     
-    // Convert date fields and add generated ID
+    // Remove id from input data and add generated ID
+    const { id, ...inputData } = data
     const cleanData = {
-      ...data,
+      ...inputData,
       id: customerId,
       contractExpiry: data.contractExpiry ? new Date(data.contractExpiry) : null,
     }

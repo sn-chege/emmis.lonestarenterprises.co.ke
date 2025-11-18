@@ -40,6 +40,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Password is required' }, { status: 400 })
     }
     
+    // Check for duplicate email
+    const existingUser = await prisma.user.findUnique({
+      where: { email: data.email }
+    })
+    if (existingUser) {
+      return NextResponse.json({ error: 'Email already exists' }, { status: 400 })
+    }
+    
     // Generate auto ID
     const lastUser = await prisma.user.findFirst({
       orderBy: { id: 'desc' },

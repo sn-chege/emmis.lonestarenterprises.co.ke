@@ -16,6 +16,7 @@ import { Wrench, FileText, Search, Eye, Edit, Trash2, Play, CheckCircle, Calenda
 import { useToast } from "@/hooks/use-toast"
 import { ProtectedLayout } from "@/components/protected-layout"
 import { DataTable } from "@/components/ui/data-table"
+import { CSVImportModal } from "@/components/ui/csv-import-modal"
 
 export default function MaintenancePage() {
   const { toast } = useToast()
@@ -30,6 +31,7 @@ export default function MaintenancePage() {
   const [templatesModalOpen, setTemplatesModalOpen] = useState(false)
   const [selectedMaintenance, setSelectedMaintenance] = useState<MaintenanceRecord | null>(null)
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view" | "complete" | "reschedule">("add")
+  const [importModalOpen, setImportModalOpen] = useState(false)
 
   const filteredMaintenance = useMemo(() => {
     return maintenance.filter((m) => {
@@ -149,6 +151,29 @@ export default function MaintenancePage() {
     }
   }
 
+  const handleImport = async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    const response = await fetch('/api/maintenance/import', {
+      method: 'POST',
+      body: formData
+    })
+    
+    const result = await response.json()
+    
+    if (result.success) {
+      const maintenanceData = await api.getMaintenanceSchedules()
+      setMaintenance(maintenanceData)
+      toast({
+        title: "Import Completed",
+        description: result.message,
+      })
+    }
+    
+    return result
+  }
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       scheduled: "outline",
@@ -220,6 +245,10 @@ export default function MaintenancePage() {
             <Button variant="outline" onClick={() => setTemplatesModalOpen(true)}>
               <FileText className="mr-2 h-4 w-4" />
               Templates
+            </Button>
+            <Button variant="outline" onClick={() => setImportModalOpen(true)}>
+              <FileBarChart className="mr-2 h-4 w-4" />
+              Import
             </Button>
             <Button onClick={handleAdd}>
               <Wrench className="mr-2 h-4 w-4" />
@@ -400,6 +429,13 @@ export default function MaintenancePage() {
           onOpenChange={setTemplatesModalOpen}
           templates={templates}
           onTemplatesChange={setTemplates}
+        />
+
+        <CSVImportModal
+          isOpen={importModalOpen}
+          onClose={() => setImportModalOpen(false)}
+          entityType="maintenance"
+          onImport={handleImport}
         />
       </div>
     </ProtectedLayout>

@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, FilterX, Download, Eye, Edit, Package, FileText } from "lucide-react"
+import { Plus, Search, FilterX, Download, Eye, Edit, Trash2 } from "lucide-react"
 import { api } from "@/lib/api"
 import type { Customer } from "@/lib/types"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
@@ -17,6 +17,7 @@ import { useNotifications } from "@/components/notification-provider"
 import { SoftDeleteToggle } from "@/components/soft-delete-toggle"
 import { DataTable } from "@/components/ui/data-table"
 import { useTableExport } from "@/hooks/use-table-export"
+import { CSVImportModal } from "@/components/ui/csv-import-modal"
 
 export default function CustomersPage() {
   const { notifySuccess, notifyError, notifyDelete } = useNotifications()
@@ -30,6 +31,7 @@ export default function CustomersPage() {
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add")
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [showDeleted, setShowDeleted] = useState(false)
+  const [importModalOpen, setImportModalOpen] = useState(false)
 
   const filteredCustomers = useMemo(() => {
     return customers.filter((customer) => {
@@ -132,6 +134,25 @@ export default function CustomersPage() {
     notifySuccess("Export Started", "Exporting customer data to Excel...")
   }
 
+  const handleImport = async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    const response = await fetch('/api/customers/import', {
+      method: 'POST',
+      body: formData
+    })
+    
+    const result = await response.json()
+    
+    if (result.success) {
+      await fetchCustomers()
+      notifySuccess("Import Completed", result.message)
+    }
+    
+    return result
+  }
+
   const getPaymentBadgeVariant = (status: string) => {
     switch (status) {
       case "Current":
@@ -206,7 +227,7 @@ export default function CustomersPage() {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button variant="outline" onClick={() => notifySuccess("Import Started", "Import customers functionality coming soon...")}>
+            <Button variant="outline" onClick={() => setImportModalOpen(true)}>
               <Download className="w-4 h-4 mr-2 rotate-180" />
               Import
             </Button>
@@ -344,11 +365,8 @@ export default function CustomersPage() {
                         <Button variant="ghost" size="sm" onClick={() => handleEditCustomer(customer)}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
-                          <Package className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <FileText className="w-4 h-4" />
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteCustomer(customer.id)}>
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     )
@@ -371,6 +389,13 @@ export default function CustomersPage() {
         customer={selectedCustomer}
         onSave={handleSaveCustomer}
         onDelete={handleDeleteCustomer}
+      />
+
+      <CSVImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        entityType="customers"
+        onImport={handleImport}
       />
     </ProtectedLayout>
   )

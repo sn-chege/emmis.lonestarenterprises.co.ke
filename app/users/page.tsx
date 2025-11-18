@@ -18,6 +18,7 @@ import { formatDate } from "@/lib/utils/format"
 import { useNotifications } from "@/components/notification-provider"
 import { SoftDeleteToggle } from "@/components/soft-delete-toggle"
 import { DataTable } from "@/components/ui/data-table"
+import { CSVImportModal } from "@/components/ui/csv-import-modal"
 
 export default function UsersPage() {
   const { notifySuccess, notifyError, notifyDelete } = useNotifications()
@@ -33,6 +34,7 @@ export default function UsersPage() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleted, setShowDeleted] = useState(false)
+  const [importModalOpen, setImportModalOpen] = useState(false)
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -149,6 +151,25 @@ export default function UsersPage() {
     setShowDeleted(show)
   }
 
+  const handleImport = async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    const response = await fetch('/api/users/import', {
+      method: 'POST',
+      body: formData
+    })
+    
+    const result = await response.json()
+    
+    if (result.success) {
+      await fetchUsers()
+      notifySuccess("Import Completed", result.message)
+    }
+    
+    return result
+  }
+
   useEffect(() => {
     fetchUsers()
   }, [showDeleted])
@@ -177,6 +198,10 @@ export default function UsersPage() {
               onToggle={handleToggleDeleted}
               deletedCount={showDeleted ? users.length : undefined}
             />
+            <Button variant="outline" onClick={() => setImportModalOpen(true)} className="w-full sm:w-auto">
+              <UserPlus className="mr-2 h-4 w-4 rotate-180" />
+              Import
+            </Button>
             <Button onClick={handleAddUser} className="w-full sm:w-auto">
               <UserPlus className="mr-2 h-4 w-4" />
               Add User
@@ -353,6 +378,13 @@ export default function UsersPage() {
           description={`Are you sure you want to delete ${userToDelete?.name}? This action cannot be undone and will permanently remove the user from the system.`}
           onConfirm={confirmDeleteUser}
           isLoading={isDeleting}
+        />
+
+        <CSVImportModal
+          isOpen={importModalOpen}
+          onClose={() => setImportModalOpen(false)}
+          entityType="users"
+          onImport={handleImport}
         />
       </div>
     </ProtectedLayout>
