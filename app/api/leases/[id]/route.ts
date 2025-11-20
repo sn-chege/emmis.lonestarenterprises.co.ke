@@ -26,13 +26,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params
     const data = await request.json()
+    const { id: dataId, customerId, customerName, equipmentName, serialNo, createdDate, updatedDate, deletedAt, customer, leasePayments, ...validData } = data
     
     // Convert date strings to Date objects
     const leaseData = {
-      ...data,
-      ...(data.startDate && { startDate: new Date(data.startDate) }),
-      ...(data.endDate && { endDate: new Date(data.endDate) }),
-      ...(data.nextPaymentDate && { nextPaymentDate: new Date(data.nextPaymentDate) }),
+      ...validData,
+      ...(validData.startDate && { startDate: new Date(validData.startDate) }),
+      ...(validData.endDate && { endDate: new Date(validData.endDate) }),
+      ...(validData.nextPaymentDate && { nextPaymentDate: new Date(validData.nextPaymentDate) }),
     }
     
     const lease = await prisma.lease.update({

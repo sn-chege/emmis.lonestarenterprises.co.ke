@@ -18,6 +18,8 @@ import { SoftDeleteToggle } from "@/components/soft-delete-toggle"
 import { DataTable } from "@/components/ui/data-table"
 import { useTableExport } from "@/hooks/use-table-export"
 import { CSVImportModal } from "@/components/ui/csv-import-modal"
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export default function CustomersPage() {
   const { notifySuccess, notifyError, notifyDelete } = useNotifications()
@@ -32,6 +34,8 @@ export default function CustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [showDeleted, setShowDeleted] = useState(false)
   const [importModalOpen, setImportModalOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
 
   const filteredCustomers = useMemo(() => {
     return customers.filter((customer) => {
@@ -104,12 +108,18 @@ export default function CustomersPage() {
         })
         setCustomers([...customers, newCustomer])
         notifySuccess("Customer Added", `${newCustomer.companyName} has been added successfully.`)
+        // Clear modal state on success
         setModalOpen(false)
+        setSelectedCustomer(null)
+        setModalMode("add")
       } else if (modalMode === "edit" && selectedCustomer) {
         const updatedCustomer = await api.updateCustomer(selectedCustomer.id, customerData)
         setCustomers(customers.map((c) => (c.id === selectedCustomer.id ? updatedCustomer : c)))
         notifySuccess("Customer Updated", `${updatedCustomer.companyName} has been updated successfully.`)
+        // Clear modal state on success
         setModalOpen(false)
+        setSelectedCustomer(null)
+        setModalMode("add")
       }
     } catch (error) {
       // Error will be handled by the modal's notification system
@@ -117,13 +127,20 @@ export default function CustomersPage() {
     }
   }
 
-  const handleDeleteCustomer = async (customerId: string) => {
+  const handleDeleteCustomer = (customer: Customer) => {
+    setCustomerToDelete(customer)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDeleteCustomer = async () => {
+    if (!customerToDelete) return
+    
     try {
-      const customer = customers.find((c) => c.id === customerId)
-      await api.deleteCustomer(customerId)
+      await api.deleteCustomer(customerToDelete.id)
       await fetchCustomers() // Refresh the list
-      notifyDelete("Customer Deleted", `${customer?.companyName} has been deleted successfully.`)
-      setModalOpen(false)
+      notifyDelete("Customer Deleted", `${customerToDelete.companyName} has been deleted successfully.`)
+      setDeleteDialogOpen(false)
+      setCustomerToDelete(null)
     } catch (error) {
       notifyError("Error", "Failed to delete customer")
     }
@@ -211,7 +228,8 @@ export default function CustomersPage() {
 
   return (
     <ProtectedLayout>
-      <div className="p-6 space-y-6">
+      <TooltipProvider>
+        <div className="p-6 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Customer Management</h1>
@@ -318,16 +336,7 @@ export default function CustomersPage() {
                     </div>
                   )
                 },
-                { 
-                  accessorKey: "totalEquipment", 
-                  header: "Equipment",
-                  cell: ({ row }) => (
-                    <div>
-                      <div className="font-semibold text-slate-900">{row.getValue("totalEquipment")} Equipment</div>
-                      <div className="text-sm text-slate-600">{row.original.equipmentDetails}</div>
-                    </div>
-                  )
-                },
+
                 { 
                   accessorKey: "contractStatus", 
                   header: "Contract Status",
@@ -359,15 +368,30 @@ export default function CustomersPage() {
                     const customer = row.original
                     return (
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleViewCustomer(customer)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleEditCustomer(customer)}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteCustomer(customer.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="sm" onClick={() => handleViewCustomer(customer)}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View Customer</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="sm" onClick={() => handleEditCustomer(customer)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit Customer</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteCustomer(customer)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete Customer</TooltipContent>
+                        </Tooltip>
                       </div>
                     )
                   }
@@ -397,6 +421,15 @@ export default function CustomersPage() {
         entityType="customers"
         onImport={handleImport}
       />
+
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Customer"
+        description={`Are you sure you want to delete ${customerToDelete?.companyName}? This action cannot be undone and will permanently remove the customer and all related data.`}
+        onConfirm={confirmDeleteCustomer}
+      />
+      </TooltipProvider>
     </ProtectedLayout>
   )
 }

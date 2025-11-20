@@ -25,7 +25,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params
     const data = await request.json()
-    const { consumableParts, ...workOrderData } = data
+    const { consumableParts, id: dataId, createdDate, updatedDate, deletedAt, equipmentId, ...workOrderData } = data
+    
+    // Convert date fields to proper DateTime format
+    if (workOrderData.dueDate && typeof workOrderData.dueDate === 'string') {
+      workOrderData.dueDate = new Date(workOrderData.dueDate + 'T00:00:00.000Z')
+    }
     
     const workOrder = await prisma.workOrder.update({
       where: { id },

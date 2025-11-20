@@ -16,13 +16,13 @@ import {
   Edit,
   Trash2,
 } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import Link from "next/link"
 import { formatDate } from "@/lib/utils/format"
 import { PDFPreviewModal } from "@/components/leases/pdf-preview-modal"
 
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog"
 import { useNotifications } from "@/components/notification-provider"
-import { CreateTemplateDialog } from "@/components/leases/create-template-dialog"
 import { UploadTemplateDialog } from "@/components/leases/upload-template-dialog"
 
 interface ContractTemplate {
@@ -44,7 +44,7 @@ export default function ContractTemplatesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [templateToDelete, setTemplateToDelete] = useState<ContractTemplate | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
 
   useEffect(() => {
@@ -97,7 +97,8 @@ export default function ContractTemplatesPage() {
 
   return (
     <ProtectedLayout>
-      <div className="p-6 space-y-6">
+      <TooltipProvider>
+        <div className="p-6 space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <Link href="/leases">
@@ -119,20 +120,14 @@ export default function ContractTemplatesPage() {
               <Upload className="mr-2 h-4 w-4" />
               Upload Template
             </Button>
-            <Button 
-              className="w-full sm:w-auto"
-              onClick={() => setCreateDialogOpen(true)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Template
-            </Button>
+
             <Link href="/leases/contract-templates/editor-v2">
               <Button 
                 variant="secondary"
                 className="w-full sm:w-auto"
               >
                 <FileText className="mr-2 h-4 w-4" />
-                Create Template V2
+                Create Template
               </Button>
             </Link>
           </div>
@@ -181,38 +176,65 @@ export default function ContractTemplatesPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setSelectedTemplate(template)
-                              setPreviewOpen(true)
-                            }}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Preview
-                          </Button>
-                          <Link href={`/leases/contract-templates/edit/${template.id}`}>
-                            <Button variant="outline" size="sm">
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
-                          </Link>
-                          <Button variant="outline" size="sm">
-                            <Download className="h-4 w-4 mr-1" />
-                            Download
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setTemplateToDelete(template)
-                              setDeleteDialogOpen(true)
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Delete
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => {
+                                  setSelectedTemplate(template)
+                                  setPreviewOpen(true)
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Preview</TooltipContent>
+                          </Tooltip>
+                          {(template.type === "CUSTOM" || template.type === "QUILL_DOCUMENT") && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link href="/leases/contract-templates/editor-v2">
+                                  <Button variant="ghost" size="icon">
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                              </TooltipTrigger>
+                              <TooltipContent>Edit</TooltipContent>
+                            </Tooltip>
+                          )}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => {
+                                  const link = document.createElement('a')
+                                  link.href = `/api/contracts/templates/${template.id}/download`
+                                  link.download = `${template.name}.pdf`
+                                  link.click()
+                                }}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Download</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => {
+                                  setTemplateToDelete(template)
+                                  setDeleteDialogOpen(true)
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Delete</TooltipContent>
+                          </Tooltip>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -234,10 +256,7 @@ export default function ContractTemplatesPage() {
           onOpenChange={setUploadDialogOpen}
         />
 
-        <CreateTemplateDialog
-          open={createDialogOpen}
-          onOpenChange={setCreateDialogOpen}
-        />
+
 
 
 
@@ -270,7 +289,8 @@ export default function ContractTemplatesPage() {
           }}
           isDeleting={isDeleting}
         />
-      </div>
+        </div>
+      </TooltipProvider>
     </ProtectedLayout>
   )
 }

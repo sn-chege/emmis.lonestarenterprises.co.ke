@@ -44,7 +44,7 @@ export default function EditorV2Page() {
   return (
     <ProtectedLayout>
       <QuillDocumentEditor
-        templateName="New Document Template V2"
+        templateName={`New Document Template V2 ${Math.floor(10000 + Math.random() * 90000)}`}
         onSave={handleSave}
         onCancel={handleCancel}
       />

@@ -219,26 +219,8 @@ export default function ReportsPage() {
     }
   }
 
-  const generateReport = async (reportType: string) => {
-    try {
-      const response = await fetch('/api/reports/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: reportType })
-      })
-      
-      if (!response.ok) throw new Error('Failed to generate report')
-      
-      const newReport = await response.json()
-      setReports(prev => [newReport, ...prev])
-      notifySuccess("Report Generated", `${reportType} report has been generated successfully.`)
-      
-      // Navigate to the report view page
-      router.push(`/reports/view/${newReport.id}`)
-    } catch (error) {
-      console.error('Generate report error:', error)
-      notifyError("Generation Failed", error instanceof Error ? error.message : 'Failed to generate report')
-    }
+  const viewReport = (reportTypeId: string) => {
+    router.push(`/reports/view/${reportTypeId}`)
   }
 
   const getStatusBadge = (status: GeneratedReport["status"]) => {
@@ -320,20 +302,12 @@ export default function ReportsPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <ul className="mb-4 space-y-2 text-sm">
-                    {reportType.features.map((feature, index) => (
-                      <li key={index} className="flex items-center gap-2">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
                   <Button 
                     className="w-full"
-                    onClick={() => generateReport(reportType.name)}
+                    onClick={() => viewReport(reportType.id)}
                   >
-                    <FileText className="mr-2 h-4 w-4" />
-                    Generate Report
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    View Report
                   </Button>
                 </CardContent>
               </Card>

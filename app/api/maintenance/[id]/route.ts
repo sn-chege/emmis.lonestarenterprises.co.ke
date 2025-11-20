@@ -26,7 +26,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params
     const data = await request.json()
-    const { maintenanceParts, ...maintenanceData } = data
+    const { maintenanceParts, id: dataId, createdDate, updatedDate, deletedAt, equipment, equipmentId, equipmentName, serialNo, customerId, customerName, technicianId, technicianName, consumableParts, ...maintenanceData } = data
+    
+    // Convert date fields to proper DateTime format
+    if (maintenanceData.scheduledDate && typeof maintenanceData.scheduledDate === 'string') {
+      maintenanceData.scheduledDate = new Date(maintenanceData.scheduledDate + 'T00:00:00.000Z')
+    }
+    if (maintenanceData.completedDate !== undefined) {
+      if (maintenanceData.completedDate === '' || maintenanceData.completedDate === null) {
+        maintenanceData.completedDate = null
+      } else if (typeof maintenanceData.completedDate === 'string') {
+        maintenanceData.completedDate = new Date(maintenanceData.completedDate + 'T00:00:00.000Z')
+      }
+    }
     
     const maintenance = await prisma.maintenanceSchedule.update({
       where: { id },

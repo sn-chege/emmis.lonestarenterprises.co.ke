@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, FilterX, Download, Eye, Edit, Wrench, History } from "lucide-react"
+import { Plus, Search, FilterX, Download, Eye, Edit, Trash2 } from "lucide-react"
 import { api } from "@/lib/api"
 import type { Asset } from "@/lib/types"
 import { formatCurrency, formatDate } from "@/lib/utils/format"
@@ -17,6 +17,8 @@ import { useNotifications } from "@/components/notification-provider"
 import { DataTable } from "@/components/ui/data-table"
 import { useTableExport } from "@/hooks/use-table-export"
 import { CSVImportModal } from "@/components/ui/csv-import-modal"
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export default function AssetsPage() {
   const { notifySuccess, notifyError, notifyDelete } = useNotifications()
@@ -31,6 +33,8 @@ export default function AssetsPage() {
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add")
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [importModalOpen, setImportModalOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null)
 
   const filteredAssets = useMemo(() => {
     return assets.filter((asset) => {
@@ -103,12 +107,18 @@ export default function AssetsPage() {
         })
         setAssets([...assets, newAsset])
         notifySuccess("Asset Added", `${newAsset.make} ${newAsset.model} has been added successfully.`)
+        // Clear modal state on success
         setModalOpen(false)
+        setSelectedAsset(null)
+        setModalMode("add")
       } else if (modalMode === "edit" && selectedAsset) {
         const updatedAsset = await api.updateAsset(selectedAsset.id, assetData)
         setAssets(assets.map((a) => (a.id === selectedAsset.id ? updatedAsset : a)))
         notifySuccess("Asset Updated", `${updatedAsset.make} ${updatedAsset.model} has been updated successfully.`)
+        // Clear modal state on success
         setModalOpen(false)
+        setSelectedAsset(null)
+        setModalMode("add")
       }
     } catch (error) {
       // Error will be handled by the modal's notification system
@@ -116,13 +126,20 @@ export default function AssetsPage() {
     }
   }
 
-  const handleDeleteAsset = async (assetId: string) => {
+  const handleDeleteAsset = (asset: Asset) => {
+    setAssetToDelete(asset)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDeleteAsset = async () => {
+    if (!assetToDelete) return
+    
     try {
-      const asset = assets.find((a) => a.id === assetId)
-      await api.deleteAsset(assetId)
-      setAssets(assets.filter((a) => a.id !== assetId))
-      notifyDelete("Asset Deleted", `${asset?.make} ${asset?.model} has been deleted successfully.`)
-      setModalOpen(false)
+      await api.deleteAsset(assetToDelete.id)
+      setAssets(assets.filter((a) => a.id !== assetToDelete.id))
+      notifyDelete("Asset Deleted", `${assetToDelete.make} ${assetToDelete.model} has been deleted successfully.`)
+      setDeleteDialogOpen(false)
+      setAssetToDelete(null)
     } catch (error) {
       notifyError("Error", "Failed to delete asset")
     }
@@ -213,7 +230,8 @@ export default function AssetsPage() {
 
   return (
     <ProtectedLayout>
-      <div className="p-6 space-y-6">
+      <TooltipProvider>
+        <div className="p-6 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Assets & Equipment</h1>
@@ -383,18 +401,30 @@ export default function AssetsPage() {
                     const asset = row.original
                     return (
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleViewAsset(asset)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleEditAsset(asset)}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Wrench className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <History className="w-4 h-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="sm" onClick={() => handleViewAsset(asset)}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View Asset</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="sm" onClick={() => handleEditAsset(asset)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit Asset</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteAsset(asset)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete Asset</TooltipContent>
+                        </Tooltip>
                       </div>
                     )
                   }
@@ -424,6 +454,15 @@ export default function AssetsPage() {
         entityType="assets"
         onImport={handleImport}
       />
+
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Asset"
+        description={`Are you sure you want to delete ${assetToDelete?.make} ${assetToDelete?.model}? This action cannot be undone and will permanently remove the asset and all related data.`}
+        onConfirm={confirmDeleteAsset}
+      />
+      </TooltipProvider>
     </ProtectedLayout>
   )
 }

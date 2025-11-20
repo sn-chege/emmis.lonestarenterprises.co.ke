@@ -13,13 +13,15 @@ import { api } from "@/lib/api"
 import type { MaintenanceRecord, MaintenanceTemplate } from "@/lib/types"
 import { formatDate } from "@/lib/utils/format"
 import { Wrench, FileText, Search, Eye, Edit, Trash2, Play, CheckCircle, Calendar, FileBarChart } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { useNotifications } from "@/components/notification-provider"
 import { ProtectedLayout } from "@/components/protected-layout"
 import { DataTable } from "@/components/ui/data-table"
 import { CSVImportModal } from "@/components/ui/csv-import-modal"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog"
 
 export default function MaintenancePage() {
-  const { toast } = useToast()
+  const { notifySuccess, notifyError, notifyDelete } = useNotifications()
   const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([])
   const [templates, setTemplates] = useState<MaintenanceTemplate[]>([])
   const [loading, setLoading] = useState(true)
@@ -32,6 +34,8 @@ export default function MaintenancePage() {
   const [selectedMaintenance, setSelectedMaintenance] = useState<MaintenanceRecord | null>(null)
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view" | "complete" | "reschedule">("add")
   const [importModalOpen, setImportModalOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [maintenanceToDelete, setMaintenanceToDelete] = useState<MaintenanceRecord | null>(null)
 
   const filteredMaintenance = useMemo(() => {
     return maintenance.filter((m) => {
@@ -80,44 +84,32 @@ export default function MaintenancePage() {
     try {
       const updatedMaintenance = await api.updateMaintenanceSchedule(id, { status: "inProgress" })
       setMaintenance((prev) => prev.map((m) => (m.id === id ? updatedMaintenance : m)))
-      toast({
-        title: "Maintenance Started",
-        description: "Maintenance task has been started successfully.",
-      })
+      notifySuccess("Maintenance Started", "Maintenance task has been started successfully.")
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to start maintenance",
-        variant: "destructive",
-      })
+      notifyError("Error", "Failed to start maintenance")
     }
   }
 
-  const handleDelete = async (id: string) => {
-    const m = maintenance.find((item) => item.id === id)
-    if (m?.status === "inProgress") {
-      toast({
-        title: "Cannot Delete",
-        description: "Cannot delete maintenance that is in progress.",
-        variant: "destructive",
-      })
+  const handleDelete = (m: MaintenanceRecord) => {
+    if (m.status === "inProgress") {
+      notifyError("Cannot Delete", "Cannot delete maintenance that is in progress.")
       return
     }
-    if (confirm("Are you sure you want to delete this maintenance record?")) {
-      try {
-        await api.deleteMaintenanceSchedule(id)
-        setMaintenance((prev) => prev.filter((m) => m.id !== id))
-        toast({
-          title: "Maintenance Deleted",
-          description: "Maintenance record has been deleted successfully.",
-        })
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to delete maintenance record",
-          variant: "destructive",
-        })
-      }
+    setMaintenanceToDelete(m)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!maintenanceToDelete) return
+    
+    try {
+      await api.deleteMaintenanceSchedule(maintenanceToDelete.id)
+      setMaintenance((prev) => prev.filter((m) => m.id !== maintenanceToDelete.id))
+      notifyDelete("Maintenance Deleted", "Maintenance record has been deleted successfully.")
+      setDeleteDialogOpen(false)
+      setMaintenanceToDelete(null)
+    } catch (error) {
+      notifyError("Error", "Failed to delete maintenance record")
     }
   }
 
@@ -129,25 +121,23 @@ export default function MaintenancePage() {
           ...data,
         })
         setMaintenance((prev) => [...prev, newMaintenance])
-        toast({
-          title: "Maintenance Scheduled",
-          description: "Maintenance has been scheduled successfully.",
-        })
+        notifySuccess("Maintenance Scheduled", "Maintenance has been scheduled successfully.")
+        // Clear modal state on success
+        setModalOpen(false)
+        setSelectedMaintenance(null)
+        setModalMode("add")
       } else if (modalMode === "edit" || modalMode === "complete" || modalMode === "reschedule") {
         const updatedMaintenance = await api.updateMaintenanceSchedule(data.id, data)
         setMaintenance((prev) => prev.map((m) => (m.id === data.id ? updatedMaintenance : m)))
-        toast({
-          title: "Maintenance Updated",
-          description: "Maintenance has been updated successfully.",
-        })
+        notifySuccess("Maintenance Updated", "Maintenance has been updated successfully.")
+        // Clear modal state on success
+        setModalOpen(false)
+        setSelectedMaintenance(null)
+        setModalMode("add")
       }
-      setModalOpen(false)
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save maintenance",
-        variant: "destructive",
-      })
+      notifyError("Error", "Failed to save maintenance")
+      // Don't clear modal state on error
     }
   }
 
@@ -165,10 +155,7 @@ export default function MaintenancePage() {
     if (result.success) {
       const maintenanceData = await api.getMaintenanceSchedules()
       setMaintenance(maintenanceData)
-      toast({
-        title: "Import Completed",
-        description: result.message,
-      })
+      notifySuccess("Import Completed", result.message)
     }
     
     return result
@@ -211,11 +198,7 @@ export default function MaintenancePage() {
         const data = await api.getMaintenanceSchedules()
         setMaintenance(data)
       } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to load maintenance schedules",
-          variant: "destructive",
-        })
+        notifyError("Error", "Failed to load maintenance schedules")
       } finally {
         setLoading(false)
       }
@@ -235,7 +218,8 @@ export default function MaintenancePage() {
 
   return (
     <ProtectedLayout>
-      <div className="p-6 space-y-6">
+      <TooltipProvider>
+        <div className="p-6 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Maintenance Management</h1>
@@ -370,38 +354,73 @@ export default function MaintenancePage() {
                     const m = row.original
                     return (
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleView(m)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={() => handleView(m)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View Details</TooltipContent>
+                        </Tooltip>
                         {m.status === "scheduled" && (
-                          <Button variant="ghost" size="icon" onClick={() => handleStart(m.id)}>
-                            <Play className="h-4 w-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => handleStart(m.id)}>
+                                <Play className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Start Maintenance</TooltipContent>
+                          </Tooltip>
                         )}
                         {(m.status === "scheduled" || m.status === "overdue") && (
                           <>
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(m)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleReschedule(m)}>
-                              <Calendar className="h-4 w-4" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => handleEdit(m)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Edit Maintenance</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => handleReschedule(m)}>
+                                  <Calendar className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Reschedule</TooltipContent>
+                            </Tooltip>
                           </>
                         )}
                         {m.status === "inProgress" && (
-                          <Button variant="ghost" size="icon" onClick={() => handleComplete(m)}>
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => handleComplete(m)}>
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Mark Complete</TooltipContent>
+                          </Tooltip>
                         )}
                         {m.status === "completed" && (
-                          <Button variant="ghost" size="icon" onClick={() => handleView(m)}>
-                            <FileBarChart className="h-4 w-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => handleView(m)}>
+                                <FileBarChart className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>View Report</TooltipContent>
+                          </Tooltip>
                         )}
                         {m.status !== "inProgress" && (
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(m.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => handleDelete(m)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Delete</TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     )
@@ -437,7 +456,16 @@ export default function MaintenancePage() {
           entityType="maintenance"
           onImport={handleImport}
         />
-      </div>
+
+        <DeleteConfirmationDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete Maintenance Record"
+          description={`Are you sure you want to delete maintenance record ${maintenanceToDelete?.id} for ${maintenanceToDelete?.equipmentName}? This action cannot be undone.`}
+          onConfirm={confirmDelete}
+        />
+        </div>
+      </TooltipProvider>
     </ProtectedLayout>
   )
 }

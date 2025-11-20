@@ -99,16 +99,24 @@ export default function UsersPage() {
         const newUser = await api.createUser(userData)
         setUsers(prevUsers => [...prevUsers, newUser])
         notifySuccess("User Added", "User has been added successfully.")
+        // Clear modal state on success
+        setModalOpen(false)
+        setSelectedUser(null)
+        setModalMode("add")
       } else if (modalMode === "edit" && selectedUser) {
         const updatedUser = await api.updateUser(selectedUser.id, userData)
         setUsers(prevUsers => prevUsers.map((u) => (u.id === selectedUser.id ? updatedUser : u)))
         notifySuccess("User Updated", "User has been updated successfully.")
+        // Clear modal state on success
+        setModalOpen(false)
+        setSelectedUser(null)
+        setModalMode("add")
       }
-      setModalOpen(false)
     } catch (error) {
       console.error('Save user error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to save user'
       notifyError("Save Failed", errorMessage)
+      // Don't clear modal state on error
       throw error
     }
   }

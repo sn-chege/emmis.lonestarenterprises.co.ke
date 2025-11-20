@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { FileText, Download, ZoomIn, ZoomOut } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 interface ContractTemplate {
   id: string
@@ -22,6 +22,30 @@ interface PDFPreviewModalProps {
 
 export function PDFPreviewModal({ open, onOpenChange, template }: PDFPreviewModalProps) {
   const [zoom, setZoom] = useState(100)
+  const [templateData, setTemplateData] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (template && open) {
+      fetchTemplateData()
+    }
+  }, [template, open])
+
+  const fetchTemplateData = async () => {
+    if (!template) return
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/contracts/templates/${template.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setTemplateData(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch template data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   if (!template) return null
 
@@ -81,24 +105,61 @@ export function PDFPreviewModal({ open, onOpenChange, template }: PDFPreviewModa
                   </div>
                 </div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center p-8">
-                  <div className="text-center space-y-4">
-                    <FileText className="h-20 w-20 mx-auto text-green-600" />
-                    <div>
-                      <h3 className="text-xl font-semibold">{template.name}</h3>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {template.description}
-                      </p>
-                      <div className="mt-4 p-4 bg-green-50 rounded-lg">
-                        <p className="text-sm text-green-800">
-                          <strong>Document Preview</strong>
-                        </p>
-                        <p className="text-xs text-green-600 mt-1">
-                          DOCX files would be converted to PDF or displayed using appropriate viewer.
+                <div className="w-full h-full p-8">
+                  {loading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                        <p>Loading preview...</p>
+                      </div>
+                    </div>
+                  ) : templateData?.elements ? (
+                    <div className="space-y-4">
+                      <div className="border-b pb-4">
+                        <h3 className="text-xl font-semibold">{template.name}</h3>
+                        <p className="text-sm text-muted-foreground">{template.description}</p>
+                      </div>
+                      <div className="prose max-w-none" style={{ fontSize: `${zoom/100}rem` }}>
+                        {templateData.elements.map((element: any, index: number) => {
+                          if (element.type === 'content' && element.data) {
+                            return (
+                              <div 
+                                key={index} 
+                                dangerouslySetInnerHTML={{ 
+                                  __html: element.data
+                                    .replace(/\n/g, '<br>')
+                                    .replace(/--- PAGE BREAK ---/g, '<div style="page-break-before: always; border-top: 2px dashed #ccc; margin: 20px 0; padding: 10px; text-align: center; color: #666;">Page Break</div>')
+                                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                    .replace(/_(.*?)_/g, '<u>$1</u>')
+                                    .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                                    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                                    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                                }} 
+                                className="quill-content"
+                                style={{
+                                  fontFamily: 'Times New Roman, serif',
+                                  lineHeight: '1.6',
+                                  whiteSpace: 'pre-wrap'
+                                }}
+                              />
+                            )
+                          }
+                          return null
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center space-y-4">
+                      <FileText className="h-20 w-20 mx-auto text-gray-400" />
+                      <div>
+                        <h3 className="text-xl font-semibold">{template.name}</h3>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {template.description || 'No content available'}
                         </p>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>

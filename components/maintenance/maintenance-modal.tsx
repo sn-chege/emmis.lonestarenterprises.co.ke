@@ -39,7 +39,12 @@ export function MaintenanceModal({ open, onOpenChange, mode, maintenance, onSave
 
   useEffect(() => {
     if (maintenance) {
-      setFormData(maintenance)
+      const formattedMaintenance = {
+        ...maintenance,
+        scheduledDate: maintenance.scheduledDate ? new Date(maintenance.scheduledDate).toISOString().split('T')[0] : "",
+        completedDate: maintenance.completedDate ? new Date(maintenance.completedDate).toISOString().split('T')[0] : ""
+      }
+      setFormData(formattedMaintenance)
       setShowFaultField(maintenance.type === "repair" || maintenance.type === "emergency")
     } else {
       setFormData({

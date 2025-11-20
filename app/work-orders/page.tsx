@@ -17,6 +17,7 @@ import { useNotifications } from "@/components/notification-provider"
 import { DataTable } from "@/components/ui/data-table"
 import { useTableExport } from "@/hooks/use-table-export"
 import { CSVImportModal } from "@/components/ui/csv-import-modal"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export default function WorkOrdersPage() {
   const { notifySuccess, notifyError, notifyDelete } = useNotifications()
@@ -30,6 +31,7 @@ export default function WorkOrdersPage() {
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add")
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null)
   const [importModalOpen, setImportModalOpen] = useState(false)
+  const [resetForm, setResetForm] = useState(false)
 
   const filteredWorkOrders = useMemo(() => {
     return workOrders.filter((wo) => {
@@ -99,12 +101,19 @@ export default function WorkOrdersPage() {
         })
         setWorkOrders([...workOrders, newWorkOrder])
         notifySuccess("Work Order Created", `Work order ${newWorkOrder.id} has been created successfully.`)
+        // Trigger form reset and clear modal state on success
+        setResetForm(true)
         setModalOpen(false)
+        setSelectedWorkOrder(null)
+        setModalMode("add")
       } else if (modalMode === "edit" && selectedWorkOrder) {
         const updatedWorkOrder = await api.updateWorkOrder(selectedWorkOrder.id, workOrderData)
         setWorkOrders(workOrders.map((wo) => (wo.id === selectedWorkOrder.id ? updatedWorkOrder : wo)))
         notifySuccess("Work Order Updated", `Work order ${updatedWorkOrder.id} has been updated successfully.`)
+        // Clear modal state on success
         setModalOpen(false)
+        setSelectedWorkOrder(null)
+        setModalMode("add")
       }
     } catch (error) {
       // Error will be handled by the modal's notification system
@@ -206,7 +215,8 @@ export default function WorkOrdersPage() {
 
   return (
     <ProtectedLayout>
-      <div className="p-6 space-y-6">
+      <TooltipProvider>
+        <div className="p-6 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Work Orders</h1>
@@ -363,21 +373,41 @@ export default function WorkOrdersPage() {
                     const workOrder = row.original
                     return (
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleViewWorkOrder(workOrder)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleEditWorkOrder(workOrder)}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="sm" onClick={() => handleViewWorkOrder(workOrder)}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View Work Order</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="sm" onClick={() => handleEditWorkOrder(workOrder)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit Work Order</TooltipContent>
+                        </Tooltip>
                         {!workOrder.technicianName && (
-                          <Button variant="ghost" size="sm">
-                            <UserPlus className="w-4 h-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <UserPlus className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Assign Technician</TooltipContent>
+                          </Tooltip>
                         )}
                         {workOrder.status !== "completed" && (
-                          <Button variant="ghost" size="sm">
-                            <CheckCircle className="w-4 h-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <CheckCircle className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Mark Complete</TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     )
@@ -395,11 +425,15 @@ export default function WorkOrdersPage() {
 
       <WorkOrderModal
         open={modalOpen}
-        onOpenChange={setModalOpen}
+        onOpenChange={(open) => {
+          setModalOpen(open)
+          if (open) setResetForm(false) // Reset the trigger when opening
+        }}
         mode={modalMode}
         workOrder={selectedWorkOrder}
         onSave={handleSaveWorkOrder}
         onDelete={handleDeleteWorkOrder}
+        resetForm={resetForm}
       />
 
       <CSVImportModal
@@ -408,6 +442,7 @@ export default function WorkOrdersPage() {
         entityType="work-orders"
         onImport={handleImport}
       />
+      </TooltipProvider>
     </ProtectedLayout>
   )
 }

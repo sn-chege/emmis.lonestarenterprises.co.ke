@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import type { Customer } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils/format"
-import { Trash2, Save, UserPlus } from "lucide-react"
+import { Trash2, Save, UserPlus, Package } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useNotifications } from "@/components/notification-provider"
+import { api } from "@/lib/api"
 
 interface CustomerModalProps {
   open: boolean
@@ -46,14 +47,35 @@ export function CustomerModal({ open, onOpenChange, mode, customer, onSave, onDe
   const [formData, setFormData] = useState<Partial<Customer>>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [customerEquipment, setCustomerEquipment] = useState<any[]>([])
+  const [loadingEquipment, setLoadingEquipment] = useState(false)
 
   useEffect(() => {
     if (customer && (mode === "edit" || mode === "view")) {
       setFormData(customer)
+      // Fetch equipment for view mode
+      if (mode === "view") {
+        fetchCustomerEquipment(customer.id)
+      }
     } else {
       setFormData({})
+      setCustomerEquipment([])
     }
   }, [customer, mode])
+
+  const fetchCustomerEquipment = async (customerId: string) => {
+    setLoadingEquipment(true)
+    try {
+      const assets = await api.getAssets()
+      const customerAssets = assets.filter((asset: any) => asset.customerId === customerId)
+      setCustomerEquipment(customerAssets)
+    } catch (error) {
+      console.error('Failed to fetch customer equipment:', error)
+      setCustomerEquipment([])
+    } finally {
+      setLoadingEquipment(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -198,13 +220,58 @@ export function CustomerModal({ open, onOpenChange, mode, customer, onSave, onDe
                   </div>
                   <div>
                     <span className="text-sm text-slate-600">Total Equipment:</span>
-                    <p className="font-medium">{customer.totalEquipment} units</p>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-sm text-slate-600">Equipment Details:</span>
-                    <p className="font-medium">{customer.equipmentDetails || "No equipment"}</p>
+                    <p className="font-medium">{customerEquipment.length} units</p>
                   </div>
                 </div>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-lg space-y-3">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4" />
+                  <h4 className="font-semibold text-slate-900">Equipment List</h4>
+                </div>
+                {loadingEquipment ? (
+                  <p className="text-sm text-slate-600">Loading equipment...</p>
+                ) : customerEquipment.length > 0 ? (
+                  <div className="space-y-3">
+                    {customerEquipment.map((equipment) => (
+                      <div key={equipment.id} className="border border-slate-200 rounded-lg p-3 bg-white">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="text-sm text-slate-600">Equipment:</span>
+                            <p className="font-medium">{equipment.make} {equipment.model}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-slate-600">Serial Number:</span>
+                            <p className="font-medium">{equipment.serialNumber}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-slate-600">Category:</span>
+                            <p className="font-medium">{equipment.category || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-slate-600">Status:</span>
+                            <Badge variant={equipment.operationalStatus === 'operational' ? 'default' : 'secondary'}>
+                              {equipment.operationalStatus}
+                            </Badge>
+                          </div>
+                          <div>
+                            <span className="text-sm text-slate-600">Location:</span>
+                            <p className="font-medium">{equipment.location}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-slate-600">Condition:</span>
+                            <Badge variant={equipment.conditionStatus === 'good' ? 'default' : 'secondary'}>
+                              {equipment.conditionStatus}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-600">No equipment assigned to this customer.</p>
+                )}
               </div>
             </div>
           ) : (

@@ -40,9 +40,10 @@ interface WorkOrderModalProps {
   workOrder: WorkOrder | null
   onSave: (workOrder: Partial<WorkOrder>) => Promise<void>
   onDelete: (workOrderId: string) => void
+  resetForm?: boolean
 }
 
-export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, onDelete }: WorkOrderModalProps) {
+export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, onDelete, resetForm }: WorkOrderModalProps) {
   const { notifyError } = useNotifications()
   const [formData, setFormData] = useState<Partial<WorkOrder>>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -63,6 +64,13 @@ export function WorkOrderModal({ open, onOpenChange, mode, workOrder, onSave, on
       setFormData({ type: "service", serviceType: "scheduled", priority: "medium" })
     }
   }, [workOrder, mode])
+
+  // Reset form on successful insert
+  useEffect(() => {
+    if (resetForm && mode === "add") {
+      setFormData({ type: "service", serviceType: "scheduled", priority: "medium" })
+    }
+  }, [resetForm, mode])
 
   useEffect(() => {
     const fetchData = async () => {

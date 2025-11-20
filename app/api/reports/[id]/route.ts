@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/db'
 
-const prisma = new PrismaClient()
-
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const report = await prisma.report.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
     
     if (!report) {
@@ -22,14 +21,18 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json(formattedReport)
   } catch (error) {
     console.error('Get report error:', error)
-    return NextResponse.json({ error: 'Failed to fetch report' }, { status: 500 })
+    return NextResponse.json({ 
+      error: 'Failed to fetch report',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     await prisma.report.delete({
-      where: { id: params.id }
+      where: { id }
     })
     
     return NextResponse.json({ success: true })

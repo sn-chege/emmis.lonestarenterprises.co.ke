@@ -26,11 +26,26 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const user = login(email, password)
-      if (user) {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Store user session
+        const sessionData = {
+          user: data.user,
+          expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+        }
+        localStorage.setItem("emmis_session", JSON.stringify(sessionData))
         router.push("/dashboard")
       } else {
-        setError("Invalid email or password")
+        setError(data.error || "Invalid email or password")
       }
     } catch (err) {
       setError("Invalid email or password")

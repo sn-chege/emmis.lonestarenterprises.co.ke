@@ -11,16 +11,16 @@ const DEMO_USERS = {
     name: "Admin User",
     role: "admin" as UserRole,
   },
-  "supervisor45@emmis.com": {
+  "supervisor@emmis.com": {
     id: "2",
-    email: "supervisor45@emmis.com",
+    email: "supervisor@emmis.com",
     password: "qwertyhudra45678911",
     name: "Supervisor User",
     role: "supervisor" as UserRole,
   },
-  "tech45@emmis.com": {
+  "technician@emmis.com": {
     id: "3",
-    email: "tech45@emmis.com",
+    email: "technician@emmis.com",
     password: "qwertyhudra45678911",
     name: "Technician User",
     role: "technician" as UserRole,

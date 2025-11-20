@@ -147,16 +147,24 @@ export default function LeasesPage() {
         const newLease = await api.createLease(leaseData)
         setLeases(prevLeases => [...prevLeases, newLease])
         notifySuccess("Lease Added", "Lease has been added successfully.")
+        // Clear modal state on success
+        setModalOpen(false)
+        setSelectedLease(null)
+        setModalMode("add")
       } else if (modalMode === "edit" && selectedLease) {
         const updatedLease = await api.updateLease(selectedLease.id, leaseData)
         setLeases(prevLeases => prevLeases.map((l) => (l.id === selectedLease.id ? updatedLease : l)))
         notifySuccess("Lease Updated", "Lease has been updated successfully.")
+        // Clear modal state on success
+        setModalOpen(false)
+        setSelectedLease(null)
+        setModalMode("add")
       }
-      setModalOpen(false)
     } catch (error) {
       console.error('Save lease error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to save lease'
       notifyError("Save Failed", errorMessage)
+      // Don't clear modal state on error
       throw error
     }
   }
